@@ -1,0 +1,141 @@
+{
+  "fard_habits": [
+    {
+      "title": "Fajr Prayer",
+      "title_arabic": "صلاة الفجر",
+      "description": "Pray 2 obligatory rakaat before sunrise",
+      "category": "fard",
+      "ayah_reference": "Quran 17:78 - Establish prayer at the decline of the sun",
+      "priority": 1,
+      "icon": "star"
+    },
+    {
+      "title": "Dhuhr Prayer",
+      "title_arabic": "صلاة الظهر",
+      "description": "Pray 4 obligatory rakaat at midday",
+      "category": "fard",
+      "ayah_reference": "Quran 4:103 - Indeed, prayer has been decreed upon the believers",
+      "priority": 2,
+      "icon": "star"
+    },
+    {
+      "title": "Asr Prayer",
+      "title_arabic": "صلاة العصر",
+      "description": "Pray 4 obligatory rakaat in the afternoon",
+      "category": "fard",
+      "ayah_reference": "Quran 2:238 - Maintain with care the prayers and the middle prayer",
+      "priority": 3,
+      "icon": "star"
+    },
+    {
+      "title": "Maghrib Prayer",
+      "title_arabic": "صلاة المغرب",
+      "description": "Pray 3 obligatory rakaat after sunset",
+      "category": "fard",
+      "ayah_reference": "Quran 11:114 - Establish prayer at the two ends of the day",
+      "priority": 4,
+      "icon": "star"
+    },
+    {
+      "title": "Isha Prayer",
+      "title_arabic": "صلاة العشاء",
+      "description": "Pray 4 obligatory rakaat at night",
+      "category": "fard",
+      "ayah_reference": "Quran 20:130 - Glorify the praises of your Lord before sunrise and sunset",
+      "priority": 5,
+      "icon": "star"
+    }
+  ],
+  "sunnah_habits": [
+    {
+      "title": "Fajr Sunnah Prayer",
+      "title_arabic": "سنة الفجر",
+      "description": "Pray 2 rakaat sunnah before Fajr",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Two rak'ahs before Fajr are better than the world and everything in it",
+      "priority": 1,
+      "icon": "favorite"
+    },
+    {
+      "title": "Dhuhr Sunnah Prayer",
+      "title_arabic": "سنة الظهر",
+      "description": "Pray 2-4 rakaat sunnah before/after Dhuhr",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Whoever prays 4 before Dhuhr and 4 after, Allah will forbid the Fire for him",
+      "priority": 2,
+      "icon": "favorite"
+    },
+    {
+      "title": "Maghrib Sunnah Prayer",
+      "title_arabic": "سنة المغرب",
+      "description": "Pray 2 rakaat sunnah after Maghrib",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - 2 rak'ahs after Maghrib",
+      "priority": 3,
+      "icon": "favorite"
+    },
+    {
+      "title": "Isha Sunnah Prayer",
+      "title_arabic": "سنة العشاء",
+      "description": "Pray 2 rakaat sunnah after Isha",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - 2 rak'ahs after Isha",
+      "priority": 4,
+      "icon": "favorite"
+    },
+    {
+      "title": "Morning Athkar",
+      "title_arabic": "أذكار الصباح",
+      "description": "Recite morning remembrances after Fajr",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Remember Allah in the morning and evening",
+      "priority": 5,
+      "icon": "wb_sunny"
+    },
+    {
+      "title": "Evening Athkar",
+      "title_arabic": "أذكار المساء",
+      "description": "Recite evening remembrances after Asr",
+      "category": "sunnah",
+      "ayah_reference": "Quran 33:41-42 - O you who believe! Remember Allah with much remembrance",
+      "priority": 6,
+      "icon": "nightlight"
+    },
+    {
+      "title": "Daily Quran Reading",
+      "title_arabic": "قراءة القرآن اليومية",
+      "description": "Read and reflect on the Quran daily",
+      "category": "sunnah",
+      "ayah_reference": "Quran 17:78 - Recite the Quran at dawn. Indeed, recitation at dawn is witnessed",
+      "priority": 7,
+      "icon": "menu_book"
+    },
+    {
+      "title": "Night Prayer (Qiyam)",
+      "title_arabic": "قيام الليل",
+      "description": "Pray voluntary prayers during the night",
+      "category": "sunnah",
+      "ayah_reference": "Quran 17:79 - And during the night wake up for prayer as extra worship",
+      "priority": 8,
+      "icon": "bedtime"
+    },
+    {
+      "title": "Duha Prayer",
+      "title_arabic": "صلاة الضحى",
+      "description": "Pray 2-8 rakaat in the morning",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Prayer of the forenoon brings immense blessings",
+      "priority": 9,
+      "icon": "wb_twilight"
+    },
+    {
+      "title": "Tahajjud Prayer",
+      "title_arabic": "صلاة التهجد",
+      "description": "Pray in the last third of the night",
+      "category": "sunnah",
+      "ayah_reference": "Quran 51:17-18 - They used to sleep little at night and seek forgiveness before dawn",
+      "priority": 10,
+      "icon": "nights_stay"
+    }
+  ]
+}

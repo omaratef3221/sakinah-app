@@ -1,0 +1,15 @@
+targets:
+  $default:
+    builders:
+      drift_dev:
+        options:
+          # Only analyze database files
+          generate_connect_constructor: true
+        enabled: true
+        generate_for:
+          include:
+            - lib/features/*/data/database/*.dart
+          exclude:
+            - lib/main.dart
+            - lib/features/*/presentation/*.dart
+            - lib/features/*/providers/*.dart

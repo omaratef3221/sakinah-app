@@ -1,0 +1,330 @@
+{
+  "fard_habits": [
+    {
+      "title": "Fajr Prayer",
+      "title_arabic": "صلاة الفجر",
+      "description": "Pray 2 obligatory rakaat before sunrise",
+      "category": "fard",
+      "ayah_reference": "Quran 17:78",
+      "priority": 1,
+      "icon": "star"
+    },
+    {
+      "title": "Dhuhr Prayer",
+      "title_arabic": "صلاة الظهر",
+      "description": "Pray 4 obligatory rakaat at midday",
+      "category": "fard",
+      "ayah_reference": "Quran 4:103",
+      "priority": 2,
+      "icon": "star"
+    },
+    {
+      "title": "Asr Prayer",
+      "title_arabic": "صلاة العصر",
+      "description": "Pray 4 obligatory rakaat in the afternoon",
+      "category": "fard",
+      "ayah_reference": "Quran 2:238",
+      "priority": 3,
+      "icon": "star"
+    },
+    {
+      "title": "Maghrib Prayer",
+      "title_arabic": "صلاة المغرب",
+      "description": "Pray 3 obligatory rakaat after sunset",
+      "category": "fard",
+      "ayah_reference": "Quran 11:114",
+      "priority": 4,
+      "icon": "star"
+    },
+    {
+      "title": "Isha Prayer",
+      "title_arabic": "صلاة العشاء",
+      "description": "Pray 4 obligatory rakaat at night",
+      "category": "fard",
+      "ayah_reference": "Quran 20:130",
+      "priority": 5,
+      "icon": "star"
+    }
+  ],
+  "sunnah_habits": [
+    {
+      "title": "Fajr Sunnah Prayer",
+      "title_arabic": "سنة الفجر",
+      "description": "Pray 2 rakaat sunnah before Fajr",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Two rak'ahs before Fajr are better than the world",
+      "priority": 1,
+      "icon": "favorite"
+    },
+    {
+      "title": "Dhuhr Sunnah Prayer",
+      "title_arabic": "سنة الظهر",
+      "description": "Pray 4 rakaat sunnah before/after Dhuhr",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Whoever prays 4 before and 4 after Dhuhr",
+      "priority": 2,
+      "icon": "favorite"
+    },
+    {
+      "title": "Maghrib Sunnah Prayer",
+      "title_arabic": "سنة المغرب",
+      "description": "Pray 2 rakaat sunnah after Maghrib",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - 2 rak'ahs after Maghrib",
+      "priority": 3,
+      "icon": "favorite"
+    },
+    {
+      "title": "Isha Sunnah Prayer",
+      "title_arabic": "سنة العشاء",
+      "description": "Pray 2 rakaat sunnah after Isha",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - 2 rak'ahs after Isha",
+      "priority": 4,
+      "icon": "favorite"
+    },
+    {
+      "title": "Tahajjud Prayer",
+      "title_arabic": "صلاة التهجد",
+      "description": "Pray in the last third of the night",
+      "category": "sunnah",
+      "ayah_reference": "Quran 51:17-18",
+      "priority": 5,
+      "icon": "nights_stay"
+    },
+    {
+      "title": "Duha Prayer",
+      "title_arabic": "صلاة الضحى",
+      "description": "Pray 2-8 rakaat in the morning",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Prayer of the forenoon",
+      "priority": 6,
+      "icon": "wb_twilight"
+    },
+    {
+      "title": "Witr Prayer",
+      "title_arabic": "صلاة الوتر",
+      "description": "Pray odd number of rakaat after Isha",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Allah is Witr and loves that which is Witr",
+      "priority": 7,
+      "icon": "bedtime"
+    },
+    {
+      "title": "Morning Athkar",
+      "title_arabic": "أذكار الصباح",
+      "description": "Recite morning remembrances after Fajr",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Remember Allah morning and evening",
+      "priority": 8,
+      "icon": "wb_sunny"
+    },
+    {
+      "title": "Evening Athkar",
+      "title_arabic": "أذكار المساء",
+      "description": "Recite evening remembrances after Asr",
+      "category": "sunnah",
+      "ayah_reference": "Quran 33:41-42",
+      "priority": 9,
+      "icon": "nightlight"
+    },
+    {
+      "title": "Daily Quran Reading",
+      "title_arabic": "قراءة القرآن اليومية",
+      "description": "Read and reflect on the Quran daily",
+      "category": "sunnah",
+      "ayah_reference": "Quran 17:78",
+      "priority": 10,
+      "icon": "menu_book"
+    },
+    {
+      "title": "Tahiyyatul Masjid",
+      "title_arabic": "تحية المسجد",
+      "description": "2 rakaat upon entering the mosque",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - When you enter the mosque, pray 2 rakaat",
+      "priority": 11,
+      "icon": "mosque"
+    },
+    {
+      "title": "Recite Ayatul Kursi",
+      "title_arabic": "آية الكرسي",
+      "description": "Recite after each obligatory prayer",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Whoever recites it after each prayer",
+      "priority": 12,
+      "icon": "auto_stories"
+    },
+    {
+      "title": "Sunnah Fasting Monday",
+      "title_arabic": "صيام الإثنين",
+      "description": "Fast on Mondays",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Deeds are presented on Monday",
+      "priority": 13,
+      "icon": "calendar_today"
+    },
+    {
+      "title": "Sunnah Fasting Thursday",
+      "title_arabic": "صيام الخميس",
+      "description": "Fast on Thursdays",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Deeds are presented on Thursday",
+      "priority": 14,
+      "icon": "calendar_today"
+    },
+    {
+      "title": "Sunnah Fasting White Days",
+      "title_arabic": "صيام الأيام البيض",
+      "description": "Fast 13th, 14th, 15th of lunar month",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Fast three days of each month",
+      "priority": 15,
+      "icon": "brightness_3"
+    },
+    {
+      "title": "Give Daily Charity",
+      "title_arabic": "الصدقة اليومية",
+      "description": "Give charity daily, even if small",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Every act of goodness is charity",
+      "priority": 16,
+      "icon": "volunteer_activism"
+    },
+    {
+      "title": "Smile at Others",
+      "title_arabic": "التبسم في وجه أخيك",
+      "description": "Smile when meeting others",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Smiling in your brother's face is charity",
+      "priority": 17,
+      "icon": "sentiment_satisfied"
+    },
+    {
+      "title": "Salam to Everyone",
+      "title_arabic": "إفشاء السلام",
+      "description": "Greet people with peace",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Spread peace among you",
+      "priority": 18,
+      "icon": "waving_hand"
+    },
+    {
+      "title": "Pray on Time",
+      "title_arabic": "الصلاة في وقتها",
+      "description": "Pray each salah in its time",
+      "category": "sunnah",
+      "ayah_reference": "Quran 4:103",
+      "priority": 19,
+      "icon": "schedule"
+    },
+    {
+      "title": "Seek Forgiveness 100x",
+      "title_arabic": "الاستغفار مئة مرة",
+      "description": "Say Astaghfirullah 100 times daily",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - I seek forgiveness 100 times a day",
+      "priority": 20,
+      "icon": "favorite_border"
+    },
+    {
+      "title": "SubhanAllah 33x",
+      "title_arabic": "سبحان الله ٣٣",
+      "description": "After each prayer, say SubhanAllah 33 times",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Tasbih after salah",
+      "priority": 21,
+      "icon": "counter_9"
+    },
+    {
+      "title": "Alhamdulillah 33x",
+      "title_arabic": "الحمد لله ٣٣",
+      "description": "After each prayer, say Alhamdulillah 33 times",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Tahmid after salah",
+      "priority": 22,
+      "icon": "counter_9"
+    },
+    {
+      "title": "Allahu Akbar 34x",
+      "title_arabic": "الله أكبر ٣٤",
+      "description": "After each prayer, say Allahu Akbar 34 times",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Takbir after salah",
+      "priority": 23,
+      "icon": "counter_9"
+    },
+    {
+      "title": "Read Surah Al-Kahf",
+      "title_arabic": "سورة الكهف",
+      "description": "Read Surah Al-Kahf on Friday",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Light between two Fridays",
+      "priority": 24,
+      "icon": "auto_stories"
+    },
+    {
+      "title": "Make Dua Between Adhan & Iqamah",
+      "title_arabic": "الدعاء بين الأذان والإقامة",
+      "description": "Supplicate between adhan and iqamah",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Dua between them is not rejected",
+      "priority": 25,
+      "icon": "pan_tool"
+    },
+    {
+      "title": "Visit the Sick",
+      "title_arabic": "عيادة المريض",
+      "description": "Visit and care for the sick",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Visit the sick",
+      "priority": 26,
+      "icon": "local_hospital"
+    },
+    {
+      "title": "Feed the Hungry",
+      "title_arabic": "إطعام المسكين",
+      "description": "Feed those in need",
+      "category": "sunnah",
+      "ayah_reference": "Quran 76:8",
+      "priority": 27,
+      "icon": "restaurant"
+    },
+    {
+      "title": "Good to Parents",
+      "title_arabic": "بر الوالدين",
+      "description": "Be kind and dutiful to parents",
+      "category": "sunnah",
+      "ayah_reference": "Quran 17:23",
+      "priority": 28,
+      "icon": "family_restroom"
+    },
+    {
+      "title": "Maintain Family Ties",
+      "title_arabic": "صلة الرحم",
+      "description": "Keep good relations with relatives",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Whoever wants provision increased",
+      "priority": 29,
+      "icon": "people"
+    },
+    {
+      "title": "Pray in Congregation",
+      "title_arabic": "صلاة الجماعة",
+      "description": "Pray with congregation at mosque",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - 27 times more reward",
+      "priority": 30,
+      "icon": "groups"
+    },
+    {
+      "title": "Use Miswak",
+      "title_arabic": "السواك",
+      "description": "Use miswak for oral hygiene",
+      "category": "sunnah",
+      "ayah_reference": "Hadith - Purification for mouth",
+      "priority": 31,
+      "icon": "clean_hands"
+    }
+  ]
+}

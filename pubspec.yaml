@@ -1,0 +1,76 @@
+name: sakinah_flow
+description: "A high-end AI-powered Islamic Habit Tracker"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_hooks: ^0.20.5
+  hooks_riverpod: ^2.5.2
+  riverpod_annotation: ^2.3.5
+
+  # Local Database
+  drift: ^2.20.3
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
+  # Prayer Times & Location
+  adhan: ^2.0.0+1
+  geolocator: ^13.0.2
+  geocoding: ^3.0.0
+  flutter_qiblah: ^3.1.0+1
+
+  # Animations
+  flutter_animate: ^4.5.0
+
+  # UI & Fonts
+  google_fonts: ^6.2.1
+
+  # Utilities
+  intl: ^0.19.0
+  equatable: ^2.0.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+  # Code Generation
+  build_runner: ^2.4.13
+  drift_dev: ^2.20.3
+  riverpod_generator: ^2.4.3
+  custom_lint: ^0.6.7
+  riverpod_lint: ^2.3.13
+
+flutter:
+  uses-material-design: true
+
+  # Assets
+  assets:
+    - assets/data/habits.json
+    - assets/data/preset_habits.json
+
+  # Fonts
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+
+    - family: Amiri
+      fonts:
+        - asset: assets/fonts/Amiri-Regular.ttf
+        - asset: assets/fonts/Amiri-Bold.ttf
+          weight: 700
