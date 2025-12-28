@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -10,6 +12,7 @@ import 'package:sakinah_flow/features/habits/providers/habits_database_provider.
 import 'package:sakinah_flow/features/habits/presentation/add_habit_screen.dart';
 import 'package:sakinah_flow/features/salah/services/adhan_service.dart';
 import 'package:sakinah_flow/shared/services/location_provider.dart';
+import 'package:sakinah_flow/features/home/presentation/main_navigation.dart';
 
 class DashboardScreen extends HookConsumerWidget {
   const DashboardScreen({super.key});
@@ -127,7 +130,7 @@ class DashboardScreen extends HookConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeader(context),
+                    _buildHeader(context, ref),
                     const SizedBox(height: 24),
                     prayerTimesAsync.when(
                       data: (prayerTimes) => _buildGreeting(
@@ -150,9 +153,11 @@ class DashboardScreen extends HookConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 24),
+                    _buildDuaOfTheDay(context),
+                    const SizedBox(height: 24),
                     _buildStatsOverview(fardHabitsAsync, sunnahHabitsAsync),
                     const SizedBox(height: 24),
-                    _buildQuickActions(context),
+                    _buildQuickActions(context, ref),
                     const SizedBox(height: 24),
                     _buildTodayProgress(fardHabitsAsync, sunnahHabitsAsync),
                     const SizedBox(height: 80),
@@ -166,77 +171,312 @@ class DashboardScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildHeader(BuildContext context, WidgetRef ref) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Dashboard',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFD4AF37),
-              ),
-            ),
-            Text(
-              'لوحة القيادة',
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFFD4AF37),
-                fontWeight: FontWeight.w300,
-              ),
-            ),
-          ],
+        Text(
+          'Dashboard',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFFD4AF37),
+          ),
         ),
-        GestureDetector(
-          onTap: () {
-            // Show date picker
-            showDatePicker(
-              context: context,
-              initialDate: DateTime.now(),
-              firstDate: DateTime(2020),
-              lastDate: DateTime(2030),
-              builder: (context, child) {
-                return Theme(
-                  data: Theme.of(context).copyWith(
-                    colorScheme: const ColorScheme.dark(
-                      primary: Color(0xFFD4AF37),
-                      onPrimary: Color(0xFF0A1F1A),
-                      surface: Color(0xFF0F3D30),
-                      onSurface: Colors.white,
-                    ),
-                  ),
-                  child: child!,
-                );
-              },
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFFD4AF37), Color(0xFFB8941C)],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.calendar_today_rounded,
-              color: Color(0xFF0A1F1A),
-              size: 24,
-            ),
+        Text(
+          'لوحة القيادة',
+          style: TextStyle(
+            fontSize: 16,
+            color: Color(0xFFD4AF37),
+            fontWeight: FontWeight.w300,
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _showDuaPopup(BuildContext context) async {
+    // Load duas from JSON
+    final String response = await rootBundle.loadString('assets/data/duas.json');
+    final data = json.decode(response);
+    final List<dynamic> duasList = data['duas'];
+
+    // Get random dua of the day based on current date
+    final now = DateTime.now();
+    final seed = now.year * 10000 + now.month * 100 + now.day;
+    final random = seed % duasList.length;
+    final dua = duasList[random];
+
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF1A5F4E),
+                Color(0xFF0F3D30),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+              width: 2,
+            ),
+          ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFD4AF37), Color(0xFFB8941C)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.auto_stories_rounded,
+                          color: Color(0xFF0A1F1A),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Dua of the Day',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFD4AF37),
+                              ),
+                            ),
+                            Text(
+                              'دعاء اليوم',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFFD4AF37),
+                                fontWeight: FontWeight.w300,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Dua Content
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Arabic Text
+                        Text(
+                          dua['arabic'],
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                            height: 2.0,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Divider(
+                          color: Color(0xFFD4AF37),
+                          height: 1,
+                          thickness: 1,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Transliteration
+                        Text(
+                          dua['transliteration'],
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontStyle: FontStyle.italic,
+                            color: Colors.white.withValues(alpha: 0.8),
+                            height: 1.6,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Translation
+                        Text(
+                          dua['translation'],
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.white.withValues(alpha: 0.95),
+                            height: 1.7,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Reference
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD4AF37).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.book_rounded,
+                                size: 16,
+                                color: const Color(0xFFD4AF37),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                dua['reference'],
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFFD4AF37),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Done Button
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFD4AF37),
+                      foregroundColor: const Color(0xFF0A1F1A),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Done',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDuaOfTheDay(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showDuaPopup(context),
+      child: GlassCard(
+        padding: const EdgeInsets.all(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFFD4AF37).withValues(alpha: 0.2),
+            const Color(0xFF1E40AF).withValues(alpha: 0.2),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFD4AF37), Color(0xFFB8941C)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.auto_stories_rounded,
+                color: Color(0xFF0A1F1A),
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Dua of the Day',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'دعاء اليوم',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFFD4AF37),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Tap to read today\'s dua',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white70,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: const Color(0xFFD4AF37),
+              size: 20,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -518,7 +758,7 @@ class DashboardScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
+  Widget _buildQuickActions(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -554,7 +794,7 @@ class DashboardScreen extends HookConsumerWidget {
                 Icons.bar_chart_rounded,
                 () {
                   // Navigate to Progress tab (index 4)
-                  DefaultTabController.of(context).animateTo(4);
+                  ref.read(navigationIndexProvider.notifier).state = 4;
                 },
               ),
             ),
