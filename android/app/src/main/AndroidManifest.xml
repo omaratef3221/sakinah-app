@@ -3,6 +3,14 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- Restrict to phones only (exclude tablets and other large screens) -->
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="false"
+        android:xlargeScreens="false"
+        android:requiresSmallestWidthDp="320" />
+
     <application
         android:label="Sakinah"
         android:name="${applicationName}"
