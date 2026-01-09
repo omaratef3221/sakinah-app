@@ -617,82 +617,33 @@ class PrayerScreen extends HookConsumerWidget {
                   color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+              // Instruction text
               Container(
-                width: 180,
-                height: 180,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFFD4AF37).withValues(alpha: 0.2),
-                      const Color(0xFFD4AF37).withValues(alpha: 0.05),
-                      Colors.transparent,
-                    ],
-                    stops: const [0.0, 0.5, 1.0],
-                  ),
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
-                    width: 2,
+                    color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+                    width: 1,
                   ),
                 ),
-                child: Stack(
-                  alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Compass markings
-                    ...List.generate(12, (index) {
-                      final angle = (index * 30) * math.pi / 180;
-                      return Transform.rotate(
-                        angle: angle,
-                        child: Container(
-                          width: 2,
-                          height: 160,
-                          alignment: Alignment.topCenter,
-                          child: Container(
-                            width: 2,
-                            height: index % 3 == 0 ? 12 : 6,
-                            color: Colors.white.withValues(alpha: 0.3),
-                          ),
-                        ),
-                      );
-                    }),
-                    // Kaaba icon and needle - rotated to actual Qibla direction
-                    Transform.rotate(
-                      angle: qiblaAngleRadians,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.architecture_rounded,
-                            size: 32,
-                            color: Color(0xFFD4AF37),
-                          ),
-                          const SizedBox(height: 8),
-                          Icon(
-                            Icons.navigation_rounded,
-                            size: 48,
-                            color: const Color(0xFFD4AF37).withValues(alpha: 0.8),
-                          ),
-                        ],
-                      ),
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: const Color(0xFFD4AF37).withValues(alpha: 0.9),
                     ),
-                    // North indicator
-                    Positioned(
-                      top: 5,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD4AF37),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'N',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0A1F1A),
-                          ),
-                        ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Point your phone toward the Kaaba icon',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -700,32 +651,175 @@ class PrayerScreen extends HookConsumerWidget {
               ),
               const SizedBox(height: 20),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFFD4AF37).withValues(alpha: 0.25),
+                      const Color(0xFFD4AF37).withValues(alpha: 0.08),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  ),
+                  border: Border.all(
+                    color: const Color(0xFFD4AF37).withValues(alpha: 0.6),
+                    width: 3,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Subtle compass tick marks (no labels)
+                    ...List.generate(8, (index) {
+                      final angle = (index * 45) * math.pi / 180;
+                      return Transform.rotate(
+                        angle: angle,
+                        child: Container(
+                          width: 2,
+                          height: 180,
+                          alignment: Alignment.topCenter,
+                          child: Container(
+                            width: 2,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    // Center dot for reference
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    // Kaaba icon and arrow - rotated to actual Qibla direction
+                    Transform.rotate(
+                      angle: qiblaAngleRadians,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Kaaba icon at the top (direction to face)
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF0A1F1A).withValues(alpha: 0.8),
+                              border: Border.all(
+                                color: const Color(0xFFD4AF37),
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                                  blurRadius: 12,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.mosque_rounded,
+                              size: 28,
+                              color: Color(0xFFD4AF37),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          // Label below icon
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD4AF37),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'QIBLA',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0A1F1A),
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Arrow pointing toward Kaaba
+                          Icon(
+                            Icons.arrow_upward_rounded,
+                            size: 40,
+                            color: const Color(0xFFD4AF37).withValues(alpha: 0.9),
+                            shadows: [
+                              Shadow(
+                                color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Direction info
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFFD4AF37).withValues(alpha: 0.2),
-                      const Color(0xFFD4AF37).withValues(alpha: 0.1),
+                      const Color(0xFFD4AF37).withValues(alpha: 0.25),
+                      const Color(0xFFD4AF37).withValues(alpha: 0.15),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                    width: 1.5,
+                  ),
                 ),
                 child: Column(
                   children: [
-                    Text(
-                      '${qiblaDirection.toStringAsFixed(1)}° $cardinalDirection',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFD4AF37),
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.my_location_rounded,
+                          size: 16,
+                          color: Color(0xFFD4AF37),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${qiblaDirection.toStringAsFixed(1)}° $cardinalDirection',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFD4AF37),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
-                      'Makkah Al-Mukarramah',
+                      'toward Makkah Al-Mukarramah',
                       style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.7),
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.75),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],

@@ -41,12 +41,19 @@ class PrayerTimesNotifier extends _$PrayerTimesNotifier {
     state = AsyncValue.data(_calculatePrayerTimes(location));
   }
 
-  // Get next prayer
+  // Get next prayer (including next day's Fajr after Isha)
   Prayer? getNextPrayer() {
     final times = state.value;
     if (times == null) return null;
 
-    return times.nextPrayer();
+    final nextPrayer = times.nextPrayer();
+
+    // If no next prayer today (after Isha), return Fajr for next day
+    if (nextPrayer == Prayer.none) {
+      return Prayer.fajr;
+    }
+
+    return nextPrayer;
   }
 
   // Get current prayer
@@ -79,13 +86,29 @@ class PrayerTimesNotifier extends _$PrayerTimesNotifier {
     return now.isAfter(startTime) && now.isBefore(endTime);
   }
 
-  // Get time until next prayer
+  // Get time until next prayer (handles next day's Fajr)
   Duration? getTimeUntilNextPrayer() {
     final times = state.value;
     if (times == null) return null;
 
     final nextPrayer = times.nextPrayer();
-    if (nextPrayer == Prayer.none) return null;
+
+    // If after Isha, calculate time until tomorrow's Fajr
+    if (nextPrayer == Prayer.none) {
+      final location = ref.read(locationNotifierProvider).value;
+      if (location == null) return null;
+
+      // Calculate tomorrow's prayer times
+      final coordinates = Coordinates(location.latitude, location.longitude);
+      final params = CalculationMethod.dubai.getParameters();
+      params.madhab = Madhab.shafi;
+
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      final tomorrowTimes = PrayerTimes(coordinates, DateComponents.from(tomorrow), params);
+      final tomorrowFajr = tomorrowTimes.fajr;
+
+      return tomorrowFajr.difference(DateTime.now());
+    }
 
     final nextPrayerTime = times.timeForPrayer(nextPrayer);
     if (nextPrayerTime == null) return null;
