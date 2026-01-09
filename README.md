@@ -1,229 +1,251 @@
-# Sakinah Flow
+# Sakinah - Islamic Habit Tracker
 
-A high-end AI-powered Islamic Habit Tracker built with Flutter. Sakinah Flow helps Muslims build and maintain spiritual habits through intelligent prayer time awareness, context-sensitive habit suggestions, and streak tracking with compassionate "shield" protection.
+Transform your spiritual journey with Sakinah, an Islamic habit tracker that helps Muslims build lasting positive habits and strengthen their connection with Allah.
+
+![Platform](https://img.shields.io/badge/Platform-iOS%20%7C%20Android-blue)
+![Flutter](https://img.shields.io/badge/Flutter-3.24.5-02569B?logo=flutter)
+![License](https://img.shields.io/badge/License-Proprietary-red)
 
 ## Features
 
-### Phase 1: The Spiritual Engine
-- **AdhanService**: Calculates accurate prayer times based on GPS coordinates using the `adhan` package
-- **Location-aware**: Automatically detects your location to provide precise prayer times
-- **Prayer Time Tracking**: Real-time tracking of all five daily prayers plus sunrise
+### 🕌 Prayer Times & Qibla
+- Accurate prayer times based on your location
+- Dubai calculation method (18-degree horizon)
+- GPS-based Qibla compass
+- Never miss Fajr, Dhuhr, Asr, Maghrib, or Isha
 
-### Phase 2: The Sunnah Bridge & Habit Stacker
-- **Active Context Engine**: Intelligently determines the current time context (before Fajr, Fajr time, morning, etc.)
-- **Smart Habit Stacking**: Prioritizes habits based on current prayer time context
-- **Evening Stack (Maghrib-Isha)**: Special priority system that suggests:
-  1. Maghrib Sunnah Prayer
-  2. Evening Athkar (remembrance)
-  3. Reflection on gratitude Ayahs
+### 📿 Smart Habit Tracking
+- Track daily Islamic habits (Quran recitation, dhikr, Sunnah practices)
+- Set personalized goals and streaks
+- Visual progress with beautiful charts
+- Categories: Worship, Knowledge, Character, Health
 
-### Phase 3: The Mizan (Balance) UI
-- **Emerald, Sand & Slate Theme**: Carefully crafted color palette for a calming spiritual experience
-- **Bilingual Support**: Seamless Arabic (Amiri font) and English (Inter font) text
-- **Breathable Animations**: Smooth transitions using `flutter_animate`
+### 🤲 Dua of the Day
+- Daily curated duas from authentic Islamic sources
+- Arabic text with English transliteration and translation
+- 15+ duas with Quran and Hadith references
 
-### Phase 4: Streak "Shield" Logic
-- **Habit Tracking**: Comprehensive habit database with categories (Fard, Sunnah, Athkar)
-- **Streak Protection**: "Shield" mode for travel or illness prevents streak resets
-- **Ayah References**: Each habit linked to relevant Quranic verses
+### 📖 Islamic Resources
+- Complete Athkar collection (morning/evening remembrance)
+- Umrah and Hajj step-by-step guides
+- Easy access to essential Islamic knowledge
 
-## Technical Stack
+### ✨ Beautiful Design
+- Modern, elegant Islamic-inspired interface
+- Dark/Light mode support
+- Smooth animations and gradients
+- Clean, distraction-free experience
 
-### State Management
-- **HooksRiverpod**: Modern, declarative state management
-- All UI components use `HookConsumerWidget` for reactive updates
+## Tech Stack
 
-### Local Database
-- **Drift (SQLite)**: Type-safe SQL queries with powerful ORM
-- Habit schema with streak tracking, categories, and Ayah references
-- Real-time database streams for instant UI updates
+- **Framework**: Flutter 3.24.5
+- **State Management**: Riverpod + Flutter Hooks
+- **Database**: Drift (SQLite)
+- **Prayer Times**: adhan package
+- **Location**: geolocator, geocoding
+- **Qibla**: flutter_qiblah
+- **Animations**: flutter_animate
+- **Fonts**: Google Fonts (Poppins, Amiri)
 
-### Prayer Times & Location
-- **adhan package**: Accurate prayer time calculations
-- **geolocator**: GPS-based location services
-
-### UI & Animations
-- **flutter_animate**: Smooth, breathable animations with `.fade()` and `.slide()` effects
-- **Custom Theme**: Material Design 3 with custom color scheme
-
-## Project Architecture
-
-```
-lib/
-├── core/
-│   ├── theme/
-│   │   └── app_theme.dart              # Theme configuration
-│   ├── constants/
-│   │   └── app_colors.dart             # Color palette
-│   └── shared_models/
-│       └── habit_category.dart         # Enums and models
-│
-├── features/
-│   ├── home/
-│   │   └── presentation/
-│   │       └── home_screen.dart        # Main dashboard
-│   │
-│   ├── salah/
-│   │   └── services/
-│   │       └── adhan_service.dart      # Prayer times logic
-│   │
-│   ├── habits/
-│   │   ├── data/
-│   │   │   └── database/
-│   │   │       └── habits_database.dart    # Drift schema
-│   │   └── providers/
-│   │       ├── active_context_provider.dart    # Time context logic
-│   │       ├── habit_stacker_provider.dart     # Habit suggestions
-│   │       └── habits_database_provider.dart   # DB access
-│   │
-│   └── athkar/
-│
-└── shared/
-    └── services/
-        └── location_provider.dart      # GPS service
-```
-
-## Getting Started
+## Installation
 
 ### Prerequisites
-- Flutter SDK >= 3.5.0
+- Flutter SDK >= 3.24.5
 - Dart SDK >= 3.5.0
+- Xcode 15+ (for iOS)
+- Android Studio (for Android)
 
-### Installation
+### Setup
 
-1. **Clone the repository**
-   ```bash
-   cd /path/to/Sakinah
-   ```
-
-2. **Install dependencies**
+1. **Clone and install dependencies**
    ```bash
    flutter pub get
    ```
 
-3. **Run code generation**
+2. **Run code generation**
    ```bash
    dart run build_runner build --delete-conflicting-outputs
    ```
 
-4. **Add fonts** (Required for proper display)
-   - Download Inter font family and place in `assets/fonts/`
-     - Inter-Regular.ttf
-     - Inter-Medium.ttf
-     - Inter-SemiBold.ttf
-     - Inter-Bold.ttf
-
-   - Download Amiri font family and place in `assets/fonts/`
-     - Amiri-Regular.ttf
-     - Amiri-Bold.ttf
-
-5. **Run the app**
+3. **Run the app**
    ```bash
-   flutter run
+   # iOS
+   flutter run -d ios
+
+   # Android
+   flutter run -d android
    ```
 
-## Key Components
+## Project Structure
 
-### AdhanService
-Located in [lib/features/salah/services/adhan_service.dart](lib/features/salah/services/adhan_service.dart)
+```
+lib/
+├── core/
+│   ├── theme/              # App theme configuration
+│   └── constants/          # Constants and colors
+│
+├── features/
+│   ├── home/              # Dashboard screen
+│   ├── salah/             # Prayer times service
+│   ├── habits/            # Habit tracking
+│   │   ├── data/
+│   │   │   └── database/  # Drift database
+│   │   └── providers/     # Riverpod providers
+│   ├── athkar/            # Remembrance collection
+│   └── qibla/             # Qibla compass
+│
+└── shared/
+    └── services/          # Location and other services
 
-Provides prayer times based on user location:
-```dart
-final prayerTimes = ref.watch(prayerTimesNotifierProvider);
+assets/
+├── data/
+│   ├── habits.json        # Habit data
+│   ├── preset_habits.json # Preset habits
+│   └── duas.json          # Dua collection
+└── fonts/                 # Custom fonts
 ```
 
-Features:
-- Calculates all 5 daily prayers + sunrise
-- Returns `DateTime` objects for each prayer
-- Uses Muslim World League calculation method
-- Shafi madhab by default
-- Extension methods for Arabic/English prayer names
+## Building for Release
 
-### Active Context Provider
-Located in [lib/features/habits/providers/active_context_provider.dart](lib/features/habits/providers/active_context_provider.dart)
+### Android (Play Store)
 
-Determines the current spiritual time context:
-```dart
-final context = ref.watch(activeContextNotifierProvider);
-// Returns: beforeFajr, fajrTime, maghribToIshaTime, etc.
-```
+1. **Build release AAB**
+   ```bash
+   flutter build appbundle --release
+   ```
 
-### Habit Stacker
-Located in [lib/features/habits/providers/habit_stacker_provider.dart](lib/features/habits/providers/habit_stacker_provider.dart)
+2. **Output location**
+   ```
+   build/app/outputs/bundle/release/app-release.aab
+   ```
 
-Provides context-aware habit suggestions:
-```dart
-final habitStack = ref.watch(habitStackerNotifierProvider);
-// Returns prioritized list of HabitStackItem
-```
+3. **Signing configuration**
+   - Keystore: `android/sakinah-release-key.jks`
+   - Config: `android/key.properties`
+   - Package: `com.sakinahflow.app`
 
-Between Maghrib and Isha, automatically suggests:
-1. Maghrib Sunnah (Priority 1)
-2. Evening Athkar (Priority 2)
-3. Gratitude Reflection (Priority 3)
+### iOS (App Store)
 
-### Habits Database
-Located in [lib/features/habits/data/database/habits_database.dart](lib/features/habits/data/database/habits_database.dart)
+1. **Open in Xcode**
+   ```bash
+   open ios/Runner.xcworkspace
+   ```
 
-Drift schema with:
-- `id`: Auto-increment primary key
-- `title`: Habit name
-- `category`: Fard, Sunnah, or Athkar
-- `ayah_reference`: Related Quranic verse
-- `current_streak`: Days maintained
-- `last_completed`: Last completion timestamp
-- `is_shielded`: Protection during travel/illness
+2. **Configure signing**
+   - Team: Your Apple Developer team
+   - Bundle ID: `com.sakinahflow.app`
+   - Enable "Automatically manage signing"
 
-Key methods:
-- `completeHabit(int id)`: Updates streak intelligently
-- `toggleShield(int id, bool isShielded)`: Enable/disable streak protection
-- `watchAllHabits()`: Real-time stream of all habits
+3. **Create archive**
+   - Product → Archive
+   - Distribute App → App Store Connect → Upload
 
-## Color Palette
+## Publishing Status
 
-- **Emerald** (`#064E3B`): Primary color for actions and emphasis
-- **Sand** (`#F3E5AB`): Secondary color for warmth and highlights
-- **Slate** (`#475569`): Neutral color for text and backgrounds
+### Google Play Store
+- **Package**: com.sakinahflow.app
+- **Version**: 1.0.0 (Build 1)
+- **Status**: Ready for submission
+- **Store Listing**: Complete
+- **Privacy Policy**: https://omaratef3221.github.io/sakinah-app/privacy.html
 
-## Code Style
+### Apple App Store
+- **Bundle ID**: com.sakinahflow.app
+- **Version**: 1.0.0 (Build 1)
+- **Status**: Ready for submission
+- **App Store Connect**: App created
+- **Privacy Policy**: https://omaratef3221.github.io/sakinah-app/privacy.html
 
-- All UI components use `HookConsumerWidget`
-- Methods are small and focused (single responsibility)
-- Animations use `flutter_animate` with long, breathable durations
-- Arabic text wrapped in `Directionality` widget with RTL and Amiri font
-- English text uses Inter font family
+## Configuration Files
 
-## Next Steps
+### Android
+- `android/app/build.gradle` - Build configuration
+- `android/app/src/main/AndroidManifest.xml` - App manifest
+- `android/key.properties` - Signing credentials (gitignored)
+- `android/sakinah-release-key.jks` - Release keystore (gitignored)
 
-To continue development:
+### iOS
+- `ios/Runner.xcodeproj/project.pbxproj` - Xcode project
+- `ios/Runner/Info.plist` - App configuration
+- Bundle ID configured: `com.sakinahflow.app`
 
-1. **Add font files** to `assets/fonts/` directory
-2. **Implement notification_service** for prayer reminders
-3. **Create Athkar mood-based engine**
-4. **Build Mizan (Balance) UI** with custom painter
-5. **Implement Sakinah Mode** (Do Not Disturb during prayer)
-6. **Add habit CRUD UI** for user-created habits
+## Privacy & Data
 
-## Build Runner
+All user data is stored locally on the device:
+- Location data processed locally for prayer times
+- No data collection or transmission to external servers
+- No third-party analytics or advertising
+- Complete privacy and security
 
-Whenever you modify:
-- Drift database tables
-- Riverpod providers with `@riverpod` annotation
+## Development
 
-Run:
-```bash
-dart run build_runner build --delete-conflicting-outputs
-```
+### Code Generation
 
-Or watch for changes:
+When modifying Drift tables or Riverpod providers:
 ```bash
 dart run build_runner watch --delete-conflicting-outputs
 ```
 
+### Running Tests
+```bash
+flutter test
+```
+
+### Code Style
+- All UI components use `HookConsumerWidget`
+- Follow Flutter best practices
+- Use `flutter_animate` for animations
+- Arabic text with RTL support
+
+## App Features by Screen
+
+### Dashboard
+- Prayer times countdown
+- Next prayer notification
+- Daily dua popup
+- Quick habit tracking
+
+### Habits Screen
+- All habits list with progress
+- Streak tracking
+- Category filtering
+- Completion toggle
+
+### Prayer Times Screen
+- All 5 daily prayers
+- Sunrise time
+- Location-based calculation
+- Countdown timers
+
+### Qibla Screen
+- Compass pointing to Qibla
+- GPS-based calculation
+- Beautiful animations
+
+### More Menu
+- Athkar collection
+- Umrah guide
+- Hajj guide
+- App settings
+
+## Contributing
+
+This is a personal project. For questions or suggestions, please open an issue.
+
+## Support
+
+- **Email**: omaratef.dev@gmail.com
+- **Privacy Policy**: https://omaratef3221.github.io/sakinah-app/privacy.html
+- **GitHub**: https://github.com/omaratef3221/sakinah-app
+
 ## License
 
-This project is for personal and educational use.
+Copyright © 2026 Omar Atef. All rights reserved.
+
+This is proprietary software for personal and educational use.
 
 ---
 
 **Built with ❤️ for the Muslim Ummah**
+
+*"Indeed, in the remembrance of Allah do hearts find rest." - Quran 13:28*
