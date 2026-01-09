@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:sakinah_flow/core/theme/app_theme.dart';
-import 'package:sakinah_flow/features/home/presentation/app_initializer.dart';
+import 'package:sakinah_flow/features/splash/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +32,7 @@ class SakinahFlowApp extends StatelessWidget {
         // Islamic green theme
         scaffoldBackgroundColor: const Color(0xFF0F3D30),
       ),
-      home: const AppInitializer(),
+      home: const SplashScreen(),
     );
   }
 }
