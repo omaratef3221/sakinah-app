@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Sakinah Flow needs your location to calculate accurate prayer times based on your geographical position.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Sakinah Flow needs your location to calculate accurate prayer times based on your geographical position.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Sakinah Flow needs your location to calculate accurate prayer times based on your geographical position.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

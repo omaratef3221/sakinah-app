@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:sakinah_flow/core/widgets/glass_card.dart';
 import 'package:sakinah_flow/core/shared_models/habit_category.dart';
 import 'package:sakinah_flow/features/habits/providers/habits_database_provider.dart';
+import 'package:sakinah_flow/features/habits/data/database/habits_database.dart';
+import 'package:intl/intl.dart';
+import 'package:hijri/hijri_calendar.dart';
 
 class ProgressScreen extends HookConsumerWidget {
   const ProgressScreen({super.key});
@@ -11,6 +15,7 @@ class ProgressScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final fardHabitsAsync = ref.watch(watchFardHabitsProvider);
     final sunnahHabitsAsync = ref.watch(watchSunnahHabitsProvider);
+    final isHijri = useState(false); // Toggle between Gregorian and Hijri calendar
 
     return Container(
       decoration: const BoxDecoration(
@@ -42,7 +47,7 @@ class ProgressScreen extends HookConsumerWidget {
                     const SizedBox(height: 24),
                     _buildStatistics(fardHabitsAsync, sunnahHabitsAsync),
                     const SizedBox(height: 24),
-                    _buildMonthlyCalendar(),
+                    _buildMonthlyCalendar(isHijri),
                     const SizedBox(height: 80),
                   ],
                 ),
@@ -430,98 +435,173 @@ class ProgressScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildMonthlyCalendar() {
+  Widget _buildMonthlyCalendar(ValueNotifier<bool> isHijri) {
+    final now = DateTime.now();
+    final hijriNow = HijriCalendar.now();
+
+    // Calendar data based on type
+    String currentMonth;
+    int daysInMonth;
+    int firstWeekday;
+    DateTime today;
+    HijriCalendar? currentHijriMonth; // Store current Hijri month for date conversion
+
+    if (isHijri.value) {
+      // Hijri calendar
+      currentMonth = '${hijriNow.getLongMonthName()} ${hijriNow.hYear}';
+      daysInMonth = hijriNow.lengthOfMonth;
+      currentHijriMonth = hijriNow; // Store for date conversion
+      // Calculate first day of Hijri month - create new HijriCalendar for day 1
+      final firstDayHijri = HijriCalendar()
+        ..hYear = hijriNow.hYear
+        ..hMonth = hijriNow.hMonth
+        ..hDay = 1;
+      // The HijriCalendar automatically calculates the weekday
+      firstWeekday = (firstDayHijri.wkDay ?? 0) % 7;
+      today = DateTime(now.year, now.month, now.day);
+    } else {
+      // Gregorian calendar
+      currentMonth = DateFormat('MMMM yyyy').format(now);
+      final firstDayOfMonth = DateTime(now.year, now.month, 1);
+      final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
+      daysInMonth = lastDayOfMonth.day;
+      firstWeekday = firstDayOfMonth.weekday % 7;
+      today = DateTime(now.year, now.month, now.day);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'December 2025',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFD4AF37),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    currentMonth,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFD4AF37),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Monthly Activity',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Calendar type toggle
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  _buildCalendarToggleButton(
+                    'Gregorian',
+                    'ميلادي',
+                    !isHijri.value,
+                    () => isHijri.value = false,
+                  ),
+                  const SizedBox(width: 4),
+                  _buildCalendarToggleButton(
+                    'Hijri',
+                    'هجري',
+                    isHijri.value,
+                    () => isHijri.value = true,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         GlassCard(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFFD4AF37).withValues(alpha: 0.08),
+              const Color(0xFF10B981).withValues(alpha: 0.05),
+            ],
+          ),
           child: Column(
             children: [
+              // Day headers
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) {
                   return SizedBox(
-                    width: 36,
+                    width: 40,
                     child: Text(
                       day,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: const TextStyle(
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: Color(0xFFD4AF37),
+                        letterSpacing: 1,
                       ),
                     ),
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 12),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 7,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
+              const SizedBox(height: 16),
+              // Calendar grid with empty cells for proper alignment
+              _buildCalendarGrid(firstWeekday, daysInMonth, today, currentHijriMonth),
+              const SizedBox(height: 20),
+              // Legend with encouragement
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+                    width: 1,
+                  ),
                 ),
-                itemCount: 31,
-                itemBuilder: (context, index) {
-                  final day = index + 1;
-                  final isToday = day == 25;
-                  final hasActivity = day <= 25;
-                  final completionRate = hasActivity ? (60 + (day % 40)) : 0;
-
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: isToday
-                          ? const Color(0xFFD4AF37)
-                          : hasActivity
-                              ? _getCompletionColor(completionRate)
-                              : Colors.white.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(8),
-                      border: isToday
-                          ? Border.all(
-                              color: const Color(0xFF0A1F1A),
-                              width: 2,
-                            )
-                          : null,
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildLegendItem('0-33%', const Color(0xFF1E40AF)),
+                        const SizedBox(width: 12),
+                        _buildLegendItem('34-66%', const Color(0xFF3B82F6)),
+                        const SizedBox(width: 12),
+                        _buildLegendItem('67-99%', const Color(0xFF10B981)),
+                        const SizedBox(width: 12),
+                        _buildLegendItem('100%', const Color(0xFFD4AF37)),
+                      ],
                     ),
-                    child: Center(
-                      child: Text(
-                        '$day',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                          color: isToday
-                              ? const Color(0xFF0A1F1A)
-                              : hasActivity
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.3),
-                        ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Keep your streak alive! Every day counts 🌟',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildLegendItem('Low', const Color(0xFF1E40AF)),
-                  const SizedBox(width: 16),
-                  _buildLegendItem('Medium', const Color(0xFF3B82F6)),
-                  const SizedBox(width: 16),
-                  _buildLegendItem('High', const Color(0xFF10B981)),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -530,14 +610,217 @@ class ProgressScreen extends HookConsumerWidget {
     );
   }
 
-  Color _getCompletionColor(int rate) {
-    if (rate >= 80) {
-      return const Color(0xFF10B981);
-    } else if (rate >= 50) {
-      return const Color(0xFF3B82F6);
-    } else {
-      return const Color(0xFF1E40AF);
+  Widget _buildCalendarGrid(int firstWeekday, int daysInMonth, DateTime today, HijriCalendar? hijriMonth) {
+    final totalCells = firstWeekday + daysInMonth;
+    final rows = (totalCells / 7).ceil();
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 7,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 1,
+      ),
+      itemCount: rows * 7,
+      itemBuilder: (context, index) {
+        // Calculate the day number
+        final dayNumber = index - firstWeekday + 1;
+
+        // Empty cell before month starts or after month ends
+        if (dayNumber < 1 || dayNumber > daysInMonth) {
+          return const SizedBox.shrink();
+        }
+
+        // Convert Hijri date to Gregorian for database queries
+        DateTime date;
+        if (hijriMonth != null) {
+          // Create Hijri date for this day and convert to Gregorian
+          final hijriDate = HijriCalendar();
+          date = hijriDate.hijriToGregorian(hijriMonth.hYear, hijriMonth.hMonth, dayNumber);
+        } else {
+          // Use Gregorian date directly
+          date = DateTime(today.year, today.month, dayNumber);
+        }
+
+        final isToday = date.day == today.day && date.month == today.month && date.year == today.year;
+        final isPast = date.isBefore(today);
+        final isFuture = date.isAfter(today);
+
+        return _buildCalendarDay(dayNumber, isToday, isPast, isFuture, date);
+      },
+    );
+  }
+
+  Widget _buildCalendarDay(int day, bool isToday, bool isPast, bool isFuture, DateTime date) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final fardHabitsAsync = ref.watch(watchFardHabitsProvider);
+        final sunnahHabitsAsync = ref.watch(watchSunnahHabitsProvider);
+        final database = ref.watch(habitsDatabaseProvider);
+
+        return fardHabitsAsync.when(
+          data: (fardHabits) => sunnahHabitsAsync.when(
+            data: (sunnahHabits) {
+              final allHabits = [...fardHabits, ...sunnahHabits];
+
+              if (allHabits.isEmpty) {
+                return _buildDayCell(day, isToday, isPast, isFuture, 0, 0);
+              }
+
+              // Use FutureBuilder to check completions for this specific date
+              return FutureBuilder<int>(
+                future: _getCompletionsForDate(database, allHabits, date),
+                builder: (context, snapshot) {
+                  final completedCount = snapshot.data ?? 0;
+                  final completionRate = allHabits.isEmpty
+                      ? 0
+                      : (completedCount / allHabits.length * 100).round();
+
+                  return _buildDayCell(
+                    day,
+                    isToday,
+                    isPast,
+                    isFuture,
+                    completionRate,
+                    completedCount,
+                  );
+                },
+              );
+            },
+            loading: () => _buildDayCell(day, isToday, isPast, isFuture, 0, 0),
+            error: (_, __) => _buildDayCell(day, isToday, isPast, isFuture, 0, 0),
+          ),
+          loading: () => _buildDayCell(day, isToday, isPast, isFuture, 0, 0),
+          error: (_, __) => _buildDayCell(day, isToday, isPast, isFuture, 0, 0),
+        );
+      },
+    );
+  }
+
+  Future<int> _getCompletionsForDate(
+    HabitsDatabase database,
+    List<dynamic> habits,
+    DateTime date,
+  ) async {
+    int completedCount = 0;
+
+    for (final habit in habits) {
+      final isCompleted = await database.isCompletedOnDate(habit.id, date);
+      if (isCompleted) {
+        completedCount++;
+      }
     }
+
+    return completedCount;
+  }
+
+  Widget _buildDayCell(
+    int day,
+    bool isToday,
+    bool isPast,
+    bool isFuture,
+    int completionRate,
+    int completedCount,
+  ) {
+    Color backgroundColor;
+    Color textColor;
+    bool hasBorder = false;
+    bool hasGlow = false;
+
+    if (isToday) {
+      backgroundColor = const Color(0xFFD4AF37);
+      textColor = const Color(0xFF0A1F1A);
+      hasBorder = true;
+      hasGlow = true;
+    } else if (isFuture) {
+      backgroundColor = Colors.white.withValues(alpha: 0.05);
+      textColor = Colors.white.withValues(alpha: 0.3);
+    } else if (completionRate == 100) {
+      backgroundColor = const Color(0xFFD4AF37);
+      textColor = const Color(0xFF0A1F1A);
+      hasGlow = true;
+    } else if (completionRate >= 67) {
+      backgroundColor = const Color(0xFF10B981);
+      textColor = Colors.white;
+    } else if (completionRate >= 34) {
+      backgroundColor = const Color(0xFF3B82F6);
+      textColor = Colors.white;
+    } else if (completionRate > 0) {
+      backgroundColor = const Color(0xFF1E40AF);
+      textColor = Colors.white;
+    } else {
+      backgroundColor = Colors.white.withValues(alpha: 0.05);
+      textColor = Colors.white.withValues(alpha: 0.4);
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+        border: hasBorder
+            ? Border.all(
+                color: const Color(0xFF0A1F1A),
+                width: 2.5,
+              )
+            : null,
+        boxShadow: hasGlow
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                  blurRadius: 12,
+                  spreadRadius: 2,
+                ),
+              ]
+            : null,
+      ),
+      child: Stack(
+        children: [
+          Center(
+            child: Text(
+              '$day',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isToday ? FontWeight.bold : FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+          ),
+          if (completedCount > 0 && !isToday)
+            Positioned(
+              top: 2,
+              right: 2,
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: completionRate == 100
+                      ? const Color(0xFF0A1F1A)
+                      : Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          if (isToday)
+            Positioned(
+              bottom: 2,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  width: 4,
+                  height: 4,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0A1F1A),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _buildLegendItem(String label, Color color) {
@@ -560,6 +843,52 @@ class ProgressScreen extends HookConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCalendarToggleButton(
+    String label,
+    String arabicLabel,
+    bool isActive,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          gradient: isActive
+              ? const LinearGradient(
+                  colors: [Color(0xFFD4AF37), Color(0xFFB8941C)],
+                )
+              : null,
+          color: isActive ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                color: isActive ? const Color(0xFF0A1F1A) : const Color(0xFFD4AF37),
+              ),
+            ),
+            Text(
+              arabicLabel,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                color: isActive
+                    ? const Color(0xFF0A1F1A).withValues(alpha: 0.8)
+                    : const Color(0xFFD4AF37).withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

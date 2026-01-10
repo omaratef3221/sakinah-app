@@ -29,7 +29,8 @@ class PrayerScreen extends HookConsumerWidget {
       child: SafeArea(
         child: prayerTimesAsync.when(
           data: (prayerTimes) {
-            final nextPrayer = prayerTimes?.nextPrayer();
+            // Use the notifier's getNextPrayer() method which handles after-Isha case
+            final nextPrayer = ref.read(prayerTimesNotifierProvider.notifier).getNextPrayer();
 
             return CustomScrollView(
               physics: const BouncingScrollPhysics(),
@@ -42,7 +43,7 @@ class PrayerScreen extends HookConsumerWidget {
                       children: [
                         _buildHeader(),
                         const SizedBox(height: 24),
-                        _buildNextPrayerHero(prayerTimes, nextPrayer),
+                        _buildNextPrayerHero(ref, prayerTimes, nextPrayer),
                         const SizedBox(height: 24),
                         _buildPrayerTimesGrid(prayerTimes, nextPrayer),
                         const SizedBox(height: 24),
@@ -162,15 +163,15 @@ class PrayerScreen extends HookConsumerWidget {
     }
   }
 
-  String _getTimeRemaining(PrayerTimes? prayerTimes, Prayer? nextPrayer) {
-    if (prayerTimes == null || nextPrayer == null || nextPrayer == Prayer.none) {
+  String _getTimeRemaining(WidgetRef ref, Prayer? nextPrayer) {
+    if (nextPrayer == null || nextPrayer == Prayer.none) {
       return '--';
     }
 
-    final nextPrayerTime = prayerTimes.timeForPrayer(nextPrayer);
-    if (nextPrayerTime == null) return '--';
+    // Use the notifier's getTimeUntilNextPrayer() which handles after-Isha case
+    final duration = ref.read(prayerTimesNotifierProvider.notifier).getTimeUntilNextPrayer();
+    if (duration == null) return '--';
 
-    final duration = nextPrayerTime.difference(DateTime.now());
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
 
@@ -181,8 +182,19 @@ class PrayerScreen extends HookConsumerWidget {
     }
   }
 
-  Widget _buildNextPrayerHero(PrayerTimes? prayerTimes, Prayer? nextPrayer) {
-    final nextPrayerTime = prayerTimes?.timeForPrayer(nextPrayer ?? Prayer.none);
+  Widget _buildNextPrayerHero(WidgetRef ref, PrayerTimes? prayerTimes, Prayer? nextPrayer) {
+    // For Fajr after Isha, we need to calculate tomorrow's Fajr time
+    DateTime? nextPrayerTime;
+    if (nextPrayer == Prayer.fajr && prayerTimes?.nextPrayer() == Prayer.none) {
+      // After Isha, calculate tomorrow's Fajr
+      final duration = ref.read(prayerTimesNotifierProvider.notifier).getTimeUntilNextPrayer();
+      if (duration != null) {
+        nextPrayerTime = DateTime.now().add(duration);
+      }
+    } else {
+      nextPrayerTime = prayerTimes?.timeForPrayer(nextPrayer ?? Prayer.none);
+    }
+
     final formattedTime = nextPrayerTime != null
         ? '${_formatTime(nextPrayerTime)} ${_formatPeriod(nextPrayerTime)}'
         : '--:--';
@@ -217,7 +229,7 @@ class PrayerScreen extends HookConsumerWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  _getTimeRemaining(prayerTimes, nextPrayer),
+                  _getTimeRemaining(ref, nextPrayer),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -560,12 +572,43 @@ class PrayerScreen extends HookConsumerWidget {
     return 'Northwest';
   }
 
+  // Calculate accurate Qibla direction using the great circle formula
+  double _calculateAccurateQiblaDirection(double latitude, double longitude) {
+    // Kaaba coordinates (Mecca, Saudi Arabia)
+    const double kaabaLat = 21.4225;
+    const double kaabaLon = 39.8262;
+
+    // Convert degrees to radians
+    final lat1 = latitude * math.pi / 180;
+    final lon1 = longitude * math.pi / 180;
+    final lat2 = kaabaLat * math.pi / 180;
+    final lon2 = kaabaLon * math.pi / 180;
+
+    // Calculate difference in longitude
+    final deltaLon = lon2 - lon1;
+
+    // Calculate Qibla direction using the great circle formula
+    // qibla = atan2(sin(Δλ), cos(φ1) * tan(φ2) - sin(φ1) * cos(Δλ))
+    final y = math.sin(deltaLon);
+    final x = math.cos(lat1) * math.tan(lat2) - math.sin(lat1) * math.cos(deltaLon);
+
+    // Calculate bearing in radians and convert to degrees
+    double qibla = math.atan2(y, x) * 180 / math.pi;
+
+    // Normalize to 0-360 degrees
+    qibla = (qibla + 360) % 360;
+
+    return qibla;
+  }
+
   Widget _buildQiblaCompass(PrayerTimes? prayerTimes) {
-    // Calculate Qibla direction from current location
+    // Calculate Qibla direction from current location using accurate great circle formula
     double calculatedQiblaDirection = 0;
     if (prayerTimes != null) {
-      final qibla = Qibla(prayerTimes.coordinates);
-      calculatedQiblaDirection = qibla.direction;
+      calculatedQiblaDirection = _calculateAccurateQiblaDirection(
+        prayerTimes.coordinates.latitude,
+        prayerTimes.coordinates.longitude,
+      );
     }
 
     return StreamBuilder<QiblahDirection>(

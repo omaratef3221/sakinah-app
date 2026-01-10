@@ -87,7 +87,7 @@ class LocationNotifier extends _$LocationNotifier {
 
         // Only update if we got a more accurate position
         final currentState = state.value;
-        if (currentState != null && position != null) {
+        if (currentState != null) {
           final distance = Geolocator.distanceBetween(
             currentState.latitude,
             currentState.longitude,

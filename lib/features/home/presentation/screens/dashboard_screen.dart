@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:intl/intl.dart';
 import 'package:adhan/adhan.dart';
+import 'package:hijri/hijri_calendar.dart';
 import 'package:sakinah_flow/core/widgets/glass_card.dart';
 import 'package:sakinah_flow/features/habits/providers/habits_database_provider.dart';
 import 'package:sakinah_flow/features/habits/presentation/add_habit_screen.dart';
@@ -172,24 +173,115 @@ class DashboardScreen extends HookConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context, WidgetRef ref) {
-    return const Column(
+    final now = DateTime.now();
+    final hijriNow = HijriCalendar.now();
+
+    // Format Gregorian date
+    final gregorianDate = DateFormat('EEEE, MMMM d, yyyy').format(now);
+
+    // Format Hijri date
+    final hijriDate = '${hijriNow.hDay} ${hijriNow.getLongMonthName()} ${hijriNow.hYear} هـ';
+
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Dashboard',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFD4AF37),
-          ),
-        ),
-        Text(
-          'لوحة القيادة',
-          style: TextStyle(
-            fontSize: 16,
-            color: Color(0xFFD4AF37),
-            fontWeight: FontWeight.w300,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Dashboard',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFD4AF37),
+                  ),
+                ),
+                Text(
+                  'لوحة القيادة',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFFD4AF37),
+                    fontWeight: FontWeight.w300,
+                  ),
+                ),
+              ],
+            ),
+            // Date badges
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFD4AF37), Color(0xFFB8941C)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.calendar_today_rounded,
+                        size: 14,
+                        color: Color(0xFF0A1F1A),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        gregorianDate,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0A1F1A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.calendar_month_rounded,
+                        size: 14,
+                        color: const Color(0xFFD4AF37).withValues(alpha: 0.9),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        hijriDate,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFD4AF37).withValues(alpha: 0.95),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ],
     );
@@ -530,11 +622,32 @@ class DashboardScreen extends HookConsumerWidget {
 
     // Get next prayer from real prayer times
     if (prayerTimes != null) {
-      final nextPrayerEnum = prayerTimes.nextPrayer();
-      nextPrayer = nextPrayerEnum.englishName;
-      final nextPrayerDateTime = prayerTimes.timeForPrayer(nextPrayerEnum);
-      nextPrayerTime = _formatTime(nextPrayerDateTime);
-      prayerIcon = _getPrayerIcon(nextPrayerEnum);
+      // Use the notifier's getNextPrayer() method which handles after-Isha case
+      final nextPrayerEnum = ref.read(prayerTimesNotifierProvider.notifier).getNextPrayer();
+
+      if (nextPrayerEnum != null && nextPrayerEnum != Prayer.none) {
+        nextPrayer = nextPrayerEnum.englishName;
+
+        // For Fajr after Isha, calculate tomorrow's Fajr time
+        DateTime? nextPrayerDateTime;
+        if (nextPrayerEnum == Prayer.fajr && prayerTimes.nextPrayer() == Prayer.none) {
+          // After Isha, calculate tomorrow's Fajr
+          final duration = ref.read(prayerTimesNotifierProvider.notifier).getTimeUntilNextPrayer();
+          if (duration != null) {
+            nextPrayerDateTime = DateTime.now().add(duration);
+          }
+        } else {
+          nextPrayerDateTime = prayerTimes.timeForPrayer(nextPrayerEnum);
+        }
+
+        nextPrayerTime = _formatTime(nextPrayerDateTime);
+        prayerIcon = _getPrayerIcon(nextPrayerEnum);
+      } else {
+        // Fallback if no next prayer detected
+        nextPrayer = 'Loading...';
+        nextPrayerTime = '--:--';
+        prayerIcon = Icons.access_time_rounded;
+      }
     } else {
       // Fallback to basic logic if prayer times aren't loaded yet
       if (hour < 5) {
