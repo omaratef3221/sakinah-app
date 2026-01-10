@@ -2,20 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/features/home/presentation/main_navigation.dart';
+import 'package:sakinah_flow/features/notifications/services/notification_service.dart';
 
 class SplashScreen extends HookConsumerWidget {
   const SplashScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = ref.watch(themeColorsProvider);
+
     useEffect(() {
-      // Navigate to dashboard after 3 seconds
-      Future.delayed(const Duration(seconds: 3), () {
+      // Navigate to dashboard after 3 seconds and request notification permission
+      Future.delayed(const Duration(seconds: 3), () async {
         if (context.mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const MainNavigation()),
-          );
+          // Request notification permission directly from the system
+          final hasPermission = await NotificationService().hasPermission();
+          if (!hasPermission) {
+            // This will trigger the native iOS/Android permission dialog
+            await NotificationService().requestPermission();
+          }
+
+          if (context.mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const MainNavigation()),
+            );
+          }
         }
       });
       return null;
@@ -24,15 +37,7 @@ class SplashScreen extends HookConsumerWidget {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF064E3B), // Deep emerald
-              const Color(0xFF065F46), // Emerald
-              const Color(0xFF047857), // Lighter emerald
-            ],
-          ),
+          gradient: themeColors.backgroundGradient,
         ),
         child: Center(
           child: Column(

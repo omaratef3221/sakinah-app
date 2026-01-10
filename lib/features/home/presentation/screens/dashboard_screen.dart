@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:adhan/adhan.dart';
 import 'package:hijri/hijri_calendar.dart';
 import 'package:sakinah_flow/core/widgets/glass_card.dart';
+import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/features/habits/providers/habits_database_provider.dart';
 import 'package:sakinah_flow/features/habits/presentation/add_habit_screen.dart';
 import 'package:sakinah_flow/features/salah/services/adhan_service.dart';
@@ -101,6 +102,7 @@ class DashboardScreen extends HookConsumerWidget {
     final fardHabitsAsync = ref.watch(watchFardHabitsProvider);
     final sunnahHabitsAsync = ref.watch(watchSunnahHabitsProvider);
     final prayerTimesAsync = ref.watch(prayerTimesNotifierProvider);
+    final themeColors = ref.watch(themeColorsProvider);
     final locationState = useState<String>('Loading...');
 
     useEffect(() {
@@ -110,16 +112,8 @@ class DashboardScreen extends HookConsumerWidget {
     }, []);
 
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF1A5F4E),
-            Color(0xFF0F3D30),
-            Color(0xFF0A1F1A),
-          ],
-        ),
+      decoration: BoxDecoration(
+        gradient: themeColors.backgroundGradient,
       ),
       child: SafeArea(
         child: CustomScrollView(

@@ -2,9 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:sakinah_flow/core/theme/app_theme.dart';
 import 'package:sakinah_flow/features/splash/splash_screen.dart';
+import 'package:sakinah_flow/features/notifications/services/notification_service.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize timezone database for notifications
+  tz.initializeTimeZones();
+
+  // Initialize notification service
+  await NotificationService().initialize();
 
   // Add error handling for uncaught errors
   FlutterError.onError = (FlutterErrorDetails details) {

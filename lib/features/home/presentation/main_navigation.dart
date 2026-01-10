@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sakinah_flow/features/home/presentation/screens/prayer_screen.dart';
 import 'package:sakinah_flow/features/home/presentation/screens/leaderboard_screen.dart';
@@ -15,6 +16,7 @@ class MainNavigation extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(navigationIndexProvider);
+    final themeColors = ref.watch(themeColorsProvider);
 
     final screens = [
       const DashboardScreen(),
@@ -34,8 +36,8 @@ class MainNavigation extends HookConsumerWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              const Color(0xFF1A5F4E).withValues(alpha: 0.95),
-              const Color(0xFF0F3D30).withValues(alpha: 0.95),
+              themeColors.backgroundDark.withValues(alpha: 0.95),
+              themeColors.background.withValues(alpha: 0.95),
             ],
           ),
           boxShadow: [
@@ -117,6 +119,7 @@ class MainNavigation extends HookConsumerWidget {
     String arabicLabel,
   ) {
     final currentIndex = ref.watch(navigationIndexProvider);
+    final themeColors = ref.watch(themeColorsProvider);
     final isSelected = currentIndex == index;
 
     return Expanded(
@@ -125,11 +128,7 @@ class MainNavigation extends HookConsumerWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            gradient: isSelected
-                ? const LinearGradient(
-                    colors: [Color(0xFFD4AF37), Color(0xFFB8941C)],
-                  )
-                : null,
+            gradient: isSelected ? themeColors.primaryGradient : null,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -137,7 +136,7 @@ class MainNavigation extends HookConsumerWidget {
             children: [
               Icon(
                 icon,
-                color: isSelected ? const Color(0xFF0A1F1A) : const Color(0xFFD4AF37),
+                color: isSelected ? Colors.white : themeColors.primary,
                 size: 26,
               ),
               const SizedBox(height: 4),
@@ -146,7 +145,7 @@ class MainNavigation extends HookConsumerWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected ? const Color(0xFF0A1F1A) : const Color(0xFFD4AF37),
+                  color: isSelected ? Colors.white : themeColors.primary,
                 ),
               ),
             ],
