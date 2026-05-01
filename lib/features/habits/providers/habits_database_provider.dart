@@ -6,9 +6,16 @@ import 'package:sakinah_flow/features/habits/data/database/database_seeder.dart'
 
 part 'habits_database_provider.g.dart';
 
-@riverpod
+// keepAlive: a Drift database must be a singleton for the app's lifetime.
+// Auto-dispose causes the connection to close and reopen against the same
+// SQLite file as widgets remount, which Drift treats as a hard error
+// ("Can't re-open a database after closing it") and risks corruption.
+@Riverpod(keepAlive: true)
 HabitsDatabase habitsDatabase(Ref ref) {
   final database = HabitsDatabase();
+  // One-shot cleanup of any duplicate completions left behind by an earlier
+  // sync race (multiple rows for the same habit+day). Cheap no-op once clean.
+  database.dedupeCompletions();
   ref.onDispose(() => database.close());
   return database;
 }

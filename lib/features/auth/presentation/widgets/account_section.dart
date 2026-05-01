@@ -342,6 +342,7 @@ class _VerifyEmailRow extends ConsumerStatefulWidget {
 
 class _VerifyEmailRowState extends ConsumerState<_VerifyEmailRow> {
   bool _sending = false;
+  bool _refreshing = false;
 
   Future<void> _resend() async {
     setState(() => _sending = true);
@@ -364,8 +365,42 @@ class _VerifyEmailRowState extends ConsumerState<_VerifyEmailRow> {
     }
   }
 
+  Future<void> _refresh() async {
+    setState(() => _refreshing = true);
+    try {
+      // Firebase caches the verified flag locally; reload pulls fresh state.
+      await ref.read(authRepositoryProvider).reloadCurrentUser();
+      // authStateChanges doesn't fire on reload(), so toggle via signOut/in
+      // is overkill — instead just rebuild the watching widgets manually.
+      // The simplest reliable nudge: invalidate the auth-state stream so
+      // ConsumerWidgets re-read currentUser.
+      ref.invalidate(authStateChangesProvider);
+
+      if (!mounted) return;
+      final verified =
+          ref.read(authRepositoryProvider).currentUser?.emailVerified ?? false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(verified
+              ? 'Email verified — thanks!'
+              : 'Not verified yet. Click the link in the email, then tap Refresh again.'),
+          backgroundColor:
+              verified ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not refresh: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final busy = _sending || _refreshing;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -387,7 +422,17 @@ class _VerifyEmailRowState extends ConsumerState<_VerifyEmailRow> {
             ),
           ),
           TextButton(
-            onPressed: _sending ? null : _resend,
+            onPressed: busy ? null : _refresh,
+            child: _refreshing
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Refresh'),
+          ),
+          TextButton(
+            onPressed: busy ? null : _resend,
             child: Text(_sending ? '...' : 'Resend'),
           ),
         ],

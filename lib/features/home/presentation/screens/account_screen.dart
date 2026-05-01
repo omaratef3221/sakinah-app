@@ -1,108 +1,241 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:sakinah_flow/core/providers/theme_provider.dart';
+import 'package:sakinah_flow/core/widgets/glass_card.dart';
+import 'package:sakinah_flow/features/auth/presentation/widgets/account_section.dart';
+import 'package:sakinah_flow/features/auth/providers/auth_provider.dart';
 
-class AccountScreen extends StatelessWidget {
+class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateChangesProvider).valueOrNull;
+    final themeColors = ref.watch(themeColorsProvider);
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1A5F4E),
-              Color(0xFF0F3D30),
-              Color(0xFF0A1F1A),
-            ],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: themeColors.backgroundGradient),
         child: SafeArea(
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_rounded,
-                          color: Color(0xFFD4AF37),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Account',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFD4AF37),
-                          ),
-                        ),
-                        Text(
-                          'الحساب',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFFD4AF37),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              _AccountHeader(),
               Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.person_rounded,
-                        size: 100,
-                        color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
-                      ),
-                      const SizedBox(height: 24),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Text(
-                          'Coming Soon',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ),
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  children: [
+                    const AccountSection(),
+                    if (user != null) ...[
+                      const SizedBox(height: 20),
+                      const _SectionLabel('Account Details'),
+                      const SizedBox(height: 12),
+                      _AccountDetailsCard(user: user),
                     ],
-                  ),
+                    const SizedBox(height: 80),
+                  ],
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AccountHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.arrow_back_rounded,
+                color: Color(0xFFD4AF37),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Account',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFD4AF37),
+                ),
+              ),
+              Text(
+                'الحساب',
+                style: TextStyle(fontSize: 14, color: Color(0xFFD4AF37)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  const _SectionLabel(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFFD4AF37),
+      ),
+    );
+  }
+}
+
+class _AccountDetailsCard extends StatelessWidget {
+  final User user;
+  const _AccountDetailsCard({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    final formatter = DateFormat.yMMMMd().add_jm();
+    final created = user.metadata.creationTime;
+    final lastSignIn = user.metadata.lastSignInTime;
+    final providerId = user.providerData.isNotEmpty
+        ? user.providerData.first.providerId
+        : 'password';
+    final providerLabel = switch (providerId) {
+      'google.com' => 'Google',
+      'apple.com' => 'Apple',
+      'password' => 'Email & password',
+      _ => providerId,
+    };
+
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        children: [
+          _DetailRow(
+            icon: Icons.email_rounded,
+            label: 'Email',
+            value: user.email ?? '—',
+          ),
+          if (user.displayName != null && user.displayName!.isNotEmpty)
+            _DetailRow(
+              icon: Icons.person_rounded,
+              label: 'Name',
+              value: user.displayName!,
+            ),
+          _DetailRow(
+            icon: Icons.verified_user_rounded,
+            label: 'Sign-in method',
+            value: providerLabel,
+          ),
+          _DetailRow(
+            icon: Icons.shield_rounded,
+            label: 'Email verified',
+            value: user.emailVerified ? 'Yes' : 'Not yet',
+            valueColor: user.emailVerified
+                ? const Color(0xFF10B981)
+                : const Color(0xFFF59E0B),
+          ),
+          if (created != null)
+            _DetailRow(
+              icon: Icons.calendar_today_rounded,
+              label: 'Joined',
+              value: formatter.format(created),
+            ),
+          if (lastSignIn != null)
+            _DetailRow(
+              icon: Icons.schedule_rounded,
+              label: 'Last sign-in',
+              value: formatter.format(lastSignIn),
+            ),
+          _DetailRow(
+            icon: Icons.fingerprint_rounded,
+            label: 'User ID',
+            value: user.uid,
+            monospace: true,
+            isLast: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool monospace;
+  final bool isLast;
+
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.monospace = false,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        border: isLast
+            ? null
+            : Border(
+                bottom: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
+              ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: const Color(0xFFD4AF37)),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.white.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+          Expanded(
+            child: SelectableText(
+              value,
+              style: TextStyle(
+                fontSize: 13,
+                color: valueColor ?? Colors.white,
+                fontFamily: monospace ? 'monospace' : null,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

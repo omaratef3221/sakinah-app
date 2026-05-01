@@ -57,13 +57,31 @@ class HabitsDatabase extends _$HabitsDatabase {
         await m.create(habitCompletions);
       }
       if (from < 3) {
-        // v3: cloud sync columns
-        await m.addColumn(habits, habits.updatedAt);
-        await m.addColumn(habits, habits.deletedAt);
-        await m.addColumn(habits, habits.remoteId);
-        await m.addColumn(habitCompletions, habitCompletions.updatedAt);
-        await m.addColumn(habitCompletions, habitCompletions.deletedAt);
-        await m.addColumn(habitCompletions, habitCompletions.remoteId);
+        // v3: cloud sync columns.
+        //
+        // SQLite rejects ALTER TABLE ADD COLUMN with non-constant defaults
+        // (like CURRENT_TIMESTAMP), so we can't use Drift's m.addColumn for
+        // updatedAt — its default in the schema is `currentDateAndTime`.
+        // Workaround: add the column as nullable INTEGER, backfill with
+        // strftime('%s','now'), then leave the Dart-side default to apply
+        // for any new inserts. Drift treats nullable+with-default the same
+        // as not-null in code, so this is safe.
+        await customStatement(
+            "ALTER TABLE habits ADD COLUMN updated_at INTEGER");
+        await customStatement(
+            "UPDATE habits SET updated_at = strftime('%s','now') WHERE updated_at IS NULL");
+        await customStatement(
+            "ALTER TABLE habits ADD COLUMN deleted_at INTEGER");
+        await customStatement(
+            "ALTER TABLE habits ADD COLUMN remote_id TEXT");
+        await customStatement(
+            "ALTER TABLE habit_completions ADD COLUMN updated_at INTEGER");
+        await customStatement(
+            "UPDATE habit_completions SET updated_at = strftime('%s','now') WHERE updated_at IS NULL");
+        await customStatement(
+            "ALTER TABLE habit_completions ADD COLUMN deleted_at INTEGER");
+        await customStatement(
+            "ALTER TABLE habit_completions ADD COLUMN remote_id TEXT");
       }
     },
   );
@@ -293,20 +311,23 @@ class HabitsDatabase extends _$HabitsDatabase {
 
   // Completion History Operations
 
-  // Check if habit was completed on a specific date (excluding soft-deleted)
+  // Check if habit was completed on a specific date (excluding soft-deleted).
+  // Tolerates multiple rows for the same day — sync can occasionally produce
+  // duplicates if a remote echo races with a local write. Any non-deleted
+  // row counts as completed.
   Future<bool> isCompletedOnDate(int habitId, DateTime date) async {
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
-    final completion = await (select(habitCompletions)
-          ..where((c) =>
-              c.habitId.equals(habitId) &
-              c.completedAt.isBiggerOrEqualValue(startOfDay) &
-              c.completedAt.isSmallerOrEqualValue(endOfDay) &
-              c.deletedAt.isNull()))
-        .getSingleOrNull();
-
-    return completion != null;
+    final query = selectOnly(habitCompletions)
+      ..addColumns([habitCompletions.id.count()])
+      ..where(habitCompletions.habitId.equals(habitId) &
+          habitCompletions.completedAt.isBiggerOrEqualValue(startOfDay) &
+          habitCompletions.completedAt.isSmallerOrEqualValue(endOfDay) &
+          habitCompletions.deletedAt.isNull());
+    final row = await query.getSingle();
+    final count = row.read(habitCompletions.id.count()) ?? 0;
+    return count > 0;
   }
 
   // Get all completions for a habit (excluding soft-deleted)
@@ -432,17 +453,70 @@ class HabitsDatabase extends _$HabitsDatabase {
     required HabitCompletionsCompanion data,
     required DateTime remoteUpdatedAt,
   }) async {
-    final existing = await getCompletionByRemoteId(remoteId);
+    // 1. Match by remoteId first.
+    var existing = await getCompletionByRemoteId(remoteId);
+
+    // 2. Fallback: match by (habitId, day). This catches the case where a
+    //    local insert hasn't been pushed yet (no remoteId) but the same
+    //    completion arrives from another device. Without this, we'd insert
+    //    a duplicate row for the same day.
+    if (existing == null && data.habitId.present && data.completedAt.present) {
+      final habitId = data.habitId.value;
+      final completedAt = data.completedAt.value;
+      final startOfDay =
+          DateTime(completedAt.year, completedAt.month, completedAt.day);
+      final endOfDay = DateTime(
+          completedAt.year, completedAt.month, completedAt.day, 23, 59, 59);
+      existing = await (select(habitCompletions)
+            ..where((c) =>
+                c.habitId.equals(habitId) &
+                c.completedAt.isBiggerOrEqualValue(startOfDay) &
+                c.completedAt.isSmallerOrEqualValue(endOfDay) &
+                c.deletedAt.isNull())
+            ..limit(1))
+          .getSingleOrNull();
+    }
+
     if (existing == null) {
       final companion = data.copyWith(
         remoteId: Value(remoteId),
         updatedAt: Value(remoteUpdatedAt),
       );
       await into(habitCompletions).insert(companion);
-    } else if (remoteUpdatedAt.isAfter(existing.updatedAt)) {
-      await (update(habitCompletions)..where((c) => c.id.equals(existing.id)))
-          .write(data.copyWith(updatedAt: Value(remoteUpdatedAt)));
+    } else {
+      // Always claim the remoteId on the existing row (even if remote isn't
+      // newer) so future updates to this row find it by remoteId.
+      if (existing.remoteId != remoteId) {
+        await (update(habitCompletions)..where((c) => c.id.equals(existing!.id)))
+            .write(HabitCompletionsCompanion(remoteId: Value(remoteId)));
+      }
+      if (remoteUpdatedAt.isAfter(existing.updatedAt)) {
+        await (update(habitCompletions)..where((c) => c.id.equals(existing!.id)))
+            .write(data.copyWith(updatedAt: Value(remoteUpdatedAt)));
+      }
     }
+  }
+
+  // Hard-delete duplicate completion rows for the same (habitId, day),
+  // keeping the oldest one. Run once at startup to clean up any rows
+  // produced by the pre-fix sync race.
+  Future<int> dedupeCompletions() async {
+    final all = await (select(habitCompletions)
+          ..where((c) => c.deletedAt.isNull())
+          ..orderBy([(c) => OrderingTerm.asc(c.id)]))
+        .get();
+    final seen = <String>{};
+    final dupeIds = <int>[];
+    for (final c in all) {
+      final dayKey =
+          '${c.habitId}-${c.completedAt.year}-${c.completedAt.month}-${c.completedAt.day}';
+      if (!seen.add(dayKey)) {
+        dupeIds.add(c.id);
+      }
+    }
+    if (dupeIds.isEmpty) return 0;
+    await (delete(habitCompletions)..where((c) => c.id.isIn(dupeIds))).go();
+    return dupeIds.length;
   }
 
   // Wipe all local data (used after sign-out -> sign-in as different user
