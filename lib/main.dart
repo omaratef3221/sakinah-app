@@ -1,13 +1,19 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/core/theme/app_theme.dart';
 import 'package:sakinah_flow/features/splash/splash_screen.dart';
 import 'package:sakinah_flow/features/notifications/services/notification_service.dart';
+import 'package:sakinah_flow/firebase_options.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   tz.initializeTimeZones();
   await NotificationService().initialize();

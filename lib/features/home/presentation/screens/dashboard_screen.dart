@@ -9,6 +9,7 @@ import 'package:adhan/adhan.dart';
 import 'package:hijri/hijri_calendar.dart';
 import 'package:sakinah_flow/core/widgets/glass_card.dart';
 import 'package:sakinah_flow/core/providers/theme_provider.dart';
+import 'package:sakinah_flow/features/auth/presentation/widgets/guest_banner.dart';
 import 'package:sakinah_flow/features/habits/providers/habits_database_provider.dart';
 import 'package:sakinah_flow/features/habits/presentation/add_habit_screen.dart';
 import 'package:sakinah_flow/features/salah/services/adhan_service.dart';
@@ -121,7 +122,8 @@ class DashboardScreen extends HookConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildHeader(context, ref),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
+                    const GuestBanner(),
                     prayerTimesAsync.when(
                       data: (prayerTimes) => _buildGreeting(
                         locationState.value,

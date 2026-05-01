@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "475628769043",
+    "project_id": "sakinah-flow",
+    "storage_bucket": "sakinah-flow.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:475628769043:android:365778f5ef51bd164354e6",
+        "android_client_info": {
+          "package_name": "com.sakinahflow.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "475628769043-09jkjar0thi8l2moc6jap1l8evtofof3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sakinahflow.app",
+            "certificate_hash": "d3c0ceddf2de78533b4a831e353f86a9d1421135"
+          }
+        },
+        {
+          "client_id": "475628769043-nclhasqjo6qi2fbmtubas883k54q82q0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7w4nqahxmU1ygJPEW6v7NiIknx25lyPY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "475628769043-nclhasqjo6qi2fbmtubas883k54q82q0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "475628769043-kbv1gio00e338472hev7cl9lt46634b8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.sakinahflow.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

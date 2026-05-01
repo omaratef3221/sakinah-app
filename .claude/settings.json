@@ -11,7 +11,21 @@
       "Bash(xattr -rc .)",
       "Bash(/usr/libexec/PlistBuddy -c \"Print\" Pods/Pods.xcodeproj/project.pbxproj)",
       "Bash(ruby -e ' *)",
-      "Bash(xargs -I {} basename {})"
+      "Bash(xargs -I {} basename {})",
+      "Bash(git -C /Users/omaratef/MobileApps/Sakinah ls-files --error-unmatch AuthKey_3482ZY3BW2.p8)",
+      "Bash(git -C /Users/omaratef/MobileApps/Sakinah log --all --oneline -- AuthKey_3482ZY3BW2.p8)",
+      "Bash(mkdir -p ~/Documents/AppleKeys)",
+      "Bash(mv /Users/omaratef/MobileApps/Sakinah/AuthKey_3482ZY3BW2.p8 ~/Documents/AppleKeys/)",
+      "Read(//Users/omaratef/Documents/AppleKeys/**)",
+      "Bash(flutterfire --version)",
+      "Bash(firebase --version)",
+      "Bash(firebase login:list)",
+      "Bash(firebase projects:list)",
+      "Read(//Users/omaratef/**)",
+      "Bash(export PATH=\"$PATH:$HOME/.pub-cache/bin\")",
+      "Bash(firebase logout *)",
+      "Bash(flutterfire configure *)",
+      "Bash(/Users/omaratef/develop/flutter/bin/flutter pub *)"
     ]
   }
 }

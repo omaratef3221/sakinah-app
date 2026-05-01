@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:sakinah_flow/core/widgets/glass_card.dart';
 import 'package:sakinah_flow/core/providers/theme_provider.dart';
+import 'package:sakinah_flow/features/auth/presentation/widgets/account_section.dart';
 import 'package:sakinah_flow/features/notifications/services/notification_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -128,6 +129,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   children: [
+                    const Text(
+                      'Account',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFD4AF37),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const AccountSection(),
+                    const SizedBox(height: 24),
                     const Text(
                       'Notifications',
                       style: TextStyle(

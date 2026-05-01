@@ -3,7 +3,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:sakinah_flow/core/providers/theme_provider.dart';
-import 'package:sakinah_flow/features/home/presentation/main_navigation.dart';
+import 'package:sakinah_flow/features/auth/services/auth_gate.dart';
 import 'package:sakinah_flow/features/notifications/services/notification_service.dart';
 
 class SplashScreen extends HookConsumerWidget {
@@ -26,7 +26,7 @@ class SplashScreen extends HookConsumerWidget {
 
           if (context.mounted) {
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const MainNavigation()),
+              MaterialPageRoute(builder: (_) => const AuthGate()),
             );
           }
         }

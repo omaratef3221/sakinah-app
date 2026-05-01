@@ -17,6 +17,11 @@ class Habits extends Table {
   DateTimeColumn get lastCompleted => dateTime().nullable()();
   BoolColumn get isShielded => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  // Sync columns (v3)
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  TextColumn get remoteId => text().nullable()();
 }
 
 // Completion history table to track each day a habit was completed
@@ -25,6 +30,11 @@ class HabitCompletions extends Table {
   IntColumn get habitId => integer().references(Habits, #id, onDelete: KeyAction.cascade)();
   DateTimeColumn get completedAt => dateTime()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  // Sync columns (v3)
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  TextColumn get remoteId => text().nullable()();
 }
 
 @DriftDatabase(tables: [Habits, HabitCompletions])
@@ -32,7 +42,7 @@ class HabitsDatabase extends _$HabitsDatabase {
   HabitsDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -46,17 +56,29 @@ class HabitsDatabase extends _$HabitsDatabase {
         // Create new HabitCompletions table
         await m.create(habitCompletions);
       }
+      if (from < 3) {
+        // v3: cloud sync columns
+        await m.addColumn(habits, habits.updatedAt);
+        await m.addColumn(habits, habits.deletedAt);
+        await m.addColumn(habits, habits.remoteId);
+        await m.addColumn(habitCompletions, habitCompletions.updatedAt);
+        await m.addColumn(habitCompletions, habitCompletions.deletedAt);
+        await m.addColumn(habitCompletions, habitCompletions.remoteId);
+      }
     },
   );
 
   // CRUD Operations
 
-  // Get all habits
-  Future<List<Habit>> getAllHabits() => select(habits).get();
+  // Get all habits (excluding soft-deleted)
+  Future<List<Habit>> getAllHabits() =>
+      (select(habits)..where((h) => h.deletedAt.isNull())).get();
 
-  // Get habits by category
+  // Get habits by category (excluding soft-deleted)
   Future<List<Habit>> getHabitsByCategory(HabitCategory category) {
-    return (select(habits)..where((h) => h.category.equals(category.index)))
+    return (select(habits)
+          ..where((h) =>
+              h.category.equals(category.index) & h.deletedAt.isNull()))
         .get();
   }
 
@@ -67,16 +89,27 @@ class HabitsDatabase extends _$HabitsDatabase {
 
   // Create a new habit
   Future<int> createHabit(HabitsCompanion habit) {
-    return into(habits).insert(habit);
+    final withTimestamp = habit.copyWith(updatedAt: Value(DateTime.now()));
+    return into(habits).insert(withTimestamp);
   }
 
   // Update an existing habit
   Future<bool> updateHabit(Habit habit) {
-    return update(habits).replace(habit);
+    return update(habits).replace(habit.copyWith(updatedAt: DateTime.now()));
   }
 
-  // Delete a habit
+  // Soft-delete a habit (so sync can propagate the deletion)
   Future<int> deleteHabit(int id) {
+    return (update(habits)..where((h) => h.id.equals(id))).write(
+      HabitsCompanion(
+        deletedAt: Value(DateTime.now()),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  // Hard-delete (used by sync internals only — bypasses soft-delete)
+  Future<int> hardDeleteHabit(int id) {
     return (delete(habits)..where((h) => h.id.equals(id))).go();
   }
 
@@ -131,6 +164,7 @@ class HabitsDatabase extends _$HabitsDatabase {
       HabitCompletionsCompanion.insert(
         habitId: id,
         completedAt: today,
+        updatedAt: Value(now),
       ),
     );
 
@@ -140,6 +174,7 @@ class HabitsDatabase extends _$HabitsDatabase {
         currentStreak: Value(newStreak),
         bestStreak: Value(newBestStreak),
         lastCompleted: Value(now),
+        updatedAt: Value(now),
       ),
     );
   }
@@ -156,10 +191,10 @@ class HabitsDatabase extends _$HabitsDatabase {
     final completedToday = await isCompletedOnDate(id, today);
     if (!completedToday) return; // Nothing to uncomplete
 
-    // Delete today's completion record
+    // Soft-delete today's completion record
     await deleteCompletion(id, today);
 
-    // Recalculate streak based on remaining completions
+    // Recalculate streak based on remaining (non-deleted) completions
     final completions = await getCompletionsForHabit(id);
 
     int newStreak = 0;
@@ -203,6 +238,7 @@ class HabitsDatabase extends _$HabitsDatabase {
       HabitsCompanion(
         currentStreak: Value(newStreak),
         lastCompleted: Value(newLastCompleted),
+        updatedAt: Value(now),
       ),
     );
   }
@@ -210,8 +246,9 @@ class HabitsDatabase extends _$HabitsDatabase {
   // Reset habit streak (when shield is removed and days were missed)
   Future<void> resetHabitStreak(int id) async {
     await (update(habits)..where((h) => h.id.equals(id))).write(
-      const HabitsCompanion(
-        currentStreak: Value(0),
+      HabitsCompanion(
+        currentStreak: const Value(0),
+        updatedAt: Value(DateTime.now()),
       ),
     );
   }
@@ -221,34 +258,42 @@ class HabitsDatabase extends _$HabitsDatabase {
     await (update(habits)..where((h) => h.id.equals(id))).write(
       HabitsCompanion(
         isShielded: Value(isShielded),
+        updatedAt: Value(DateTime.now()),
       ),
     );
   }
 
   // Get habits with active streaks
   Future<List<Habit>> getHabitsWithStreaks() {
-    return (select(habits)..where((h) => h.currentStreak.isBiggerThanValue(0)))
+    return (select(habits)
+          ..where((h) =>
+              h.currentStreak.isBiggerThanValue(0) & h.deletedAt.isNull()))
         .get();
   }
 
-  // Stream all habits for real-time updates
-  Stream<List<Habit>> watchAllHabits() => select(habits).watch();
+  // Stream all habits for real-time updates (excluding soft-deleted)
+  Stream<List<Habit>> watchAllHabits() =>
+      (select(habits)..where((h) => h.deletedAt.isNull())).watch();
 
-  // Stream habits by category
+  // Stream habits by category (excluding soft-deleted)
   Stream<List<Habit>> watchHabitsByCategory(HabitCategory category) {
-    return (select(habits)..where((h) => h.category.equals(category.index)))
+    return (select(habits)
+          ..where((h) =>
+              h.category.equals(category.index) & h.deletedAt.isNull()))
         .watch();
   }
 
-  // Stream habits with active streaks
+  // Stream habits with active streaks (excluding soft-deleted)
   Stream<List<Habit>> watchHabitsWithStreaks() {
-    return (select(habits)..where((h) => h.currentStreak.isBiggerThanValue(0)))
+    return (select(habits)
+          ..where((h) =>
+              h.currentStreak.isBiggerThanValue(0) & h.deletedAt.isNull()))
         .watch();
   }
 
   // Completion History Operations
 
-  // Check if habit was completed on a specific date
+  // Check if habit was completed on a specific date (excluding soft-deleted)
   Future<bool> isCompletedOnDate(int habitId, DateTime date) async {
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
@@ -257,21 +302,22 @@ class HabitsDatabase extends _$HabitsDatabase {
           ..where((c) =>
               c.habitId.equals(habitId) &
               c.completedAt.isBiggerOrEqualValue(startOfDay) &
-              c.completedAt.isSmallerOrEqualValue(endOfDay)))
+              c.completedAt.isSmallerOrEqualValue(endOfDay) &
+              c.deletedAt.isNull()))
         .getSingleOrNull();
 
     return completion != null;
   }
 
-  // Get all completions for a habit
+  // Get all completions for a habit (excluding soft-deleted)
   Future<List<HabitCompletion>> getCompletionsForHabit(int habitId) {
     return (select(habitCompletions)
-          ..where((c) => c.habitId.equals(habitId))
+          ..where((c) => c.habitId.equals(habitId) & c.deletedAt.isNull())
           ..orderBy([(c) => OrderingTerm.desc(c.completedAt)]))
         .get();
   }
 
-  // Get completions for a habit in a date range
+  // Get completions for a habit in a date range (excluding soft-deleted)
   Future<List<HabitCompletion>> getCompletionsInRange(
     int habitId,
     DateTime startDate,
@@ -281,32 +327,129 @@ class HabitsDatabase extends _$HabitsDatabase {
           ..where((c) =>
               c.habitId.equals(habitId) &
               c.completedAt.isBiggerOrEqualValue(startDate) &
-              c.completedAt.isSmallerOrEqualValue(endDate))
+              c.completedAt.isSmallerOrEqualValue(endDate) &
+              c.deletedAt.isNull())
           ..orderBy([(c) => OrderingTerm.desc(c.completedAt)]))
         .get();
   }
 
-  // Delete a completion record
+  // Soft-delete a completion record so sync can propagate the deletion
   Future<int> deleteCompletion(int habitId, DateTime date) {
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
-    return (delete(habitCompletions)
+    final now = DateTime.now();
+    return (update(habitCompletions)
           ..where((c) =>
               c.habitId.equals(habitId) &
               c.completedAt.isBiggerOrEqualValue(startOfDay) &
-              c.completedAt.isSmallerOrEqualValue(endOfDay)))
-        .go();
+              c.completedAt.isSmallerOrEqualValue(endOfDay) &
+              c.deletedAt.isNull()))
+        .write(HabitCompletionsCompanion(
+          deletedAt: Value(now),
+          updatedAt: Value(now),
+        ));
   }
 
-  // Get completion count for a habit
+  // Get completion count for a habit (excluding soft-deleted)
   Future<int> getCompletionCount(int habitId) async {
     final result = await (selectOnly(habitCompletions)
           ..addColumns([habitCompletions.id.count()])
-          ..where(habitCompletions.habitId.equals(habitId)))
+          ..where(habitCompletions.habitId.equals(habitId) &
+              habitCompletions.deletedAt.isNull()))
         .getSingle();
 
     return result.read(habitCompletions.id.count()) ?? 0;
+  }
+
+  // ============================================================
+  // Sync helpers — used by SyncService, not by UI code.
+  // ============================================================
+
+  // All habits modified after [since] (for push to Firestore).
+  Future<List<Habit>> getHabitsUpdatedSince(DateTime since) {
+    return (select(habits)..where((h) => h.updatedAt.isBiggerThanValue(since)))
+        .get();
+  }
+
+  // All completions modified after [since] (for push to Firestore).
+  Future<List<HabitCompletion>> getCompletionsUpdatedSince(DateTime since) {
+    return (select(habitCompletions)
+          ..where((c) => c.updatedAt.isBiggerThanValue(since)))
+        .get();
+  }
+
+  // Get habit by remoteId (Firestore doc id).
+  Future<Habit?> getHabitByRemoteId(String remoteId) {
+    return (select(habits)..where((h) => h.remoteId.equals(remoteId)))
+        .getSingleOrNull();
+  }
+
+  // Get completion by remoteId.
+  Future<HabitCompletion?> getCompletionByRemoteId(String remoteId) {
+    return (select(habitCompletions)
+          ..where((c) => c.remoteId.equals(remoteId)))
+        .getSingleOrNull();
+  }
+
+  // Set the remote ID after Firestore confirms a write.
+  Future<void> setHabitRemoteId(int id, String remoteId) async {
+    await (update(habits)..where((h) => h.id.equals(id))).write(
+      HabitsCompanion(remoteId: Value(remoteId)),
+    );
+  }
+
+  Future<void> setCompletionRemoteId(int id, String remoteId) async {
+    await (update(habitCompletions)..where((c) => c.id.equals(id))).write(
+      HabitCompletionsCompanion(remoteId: Value(remoteId)),
+    );
+  }
+
+  // Upsert from a remote habit. If [remoteId] exists locally, update only when
+  // the remote `updatedAt` is newer (last-write-wins). Otherwise insert.
+  Future<void> upsertHabitFromRemote({
+    required String remoteId,
+    required HabitsCompanion data,
+    required DateTime remoteUpdatedAt,
+  }) async {
+    final existing = await getHabitByRemoteId(remoteId);
+    if (existing == null) {
+      // Insert new — let local id auto-increment, store remoteId.
+      final companion = data.copyWith(
+        remoteId: Value(remoteId),
+        updatedAt: Value(remoteUpdatedAt),
+      );
+      await into(habits).insert(companion);
+    } else if (remoteUpdatedAt.isAfter(existing.updatedAt)) {
+      await (update(habits)..where((h) => h.id.equals(existing.id))).write(
+        data.copyWith(updatedAt: Value(remoteUpdatedAt)),
+      );
+    }
+  }
+
+  Future<void> upsertCompletionFromRemote({
+    required String remoteId,
+    required HabitCompletionsCompanion data,
+    required DateTime remoteUpdatedAt,
+  }) async {
+    final existing = await getCompletionByRemoteId(remoteId);
+    if (existing == null) {
+      final companion = data.copyWith(
+        remoteId: Value(remoteId),
+        updatedAt: Value(remoteUpdatedAt),
+      );
+      await into(habitCompletions).insert(companion);
+    } else if (remoteUpdatedAt.isAfter(existing.updatedAt)) {
+      await (update(habitCompletions)..where((c) => c.id.equals(existing.id)))
+          .write(data.copyWith(updatedAt: Value(remoteUpdatedAt)));
+    }
+  }
+
+  // Wipe all local data (used after sign-out -> sign-in as different user
+  // when we want a clean slate, OR on account deletion).
+  Future<void> wipeAllLocalData() async {
+    await delete(habitCompletions).go();
+    await delete(habits).go();
   }
 }
 
