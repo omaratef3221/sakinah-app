@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -v \"\\\\.g\\\\.dart$\")",
+      "Bash(grep -v \"\\\\.freezed\\\\.dart$\")",
+      "Read(//Users/omaratef3221/Library/Mobile Documents/com~apple~CloudDocs/PersonalData/Projects/MobileApps/Sakinah/lib/core/constants/**)",
+      "Bash(dart analyze *)",
+      "Bash(xattr -lr build/ios/Debug-iphonesimulator/Flutter.framework)",
+      "Bash(xattr -rc build/)",
+      "Bash(xattr -rc ios/)",
+      "Bash(xattr -rc .)",
+      "Bash(/usr/libexec/PlistBuddy -c \"Print\" Pods/Pods.xcodeproj/project.pbxproj)",
+      "Bash(ruby -e ' *)",
+      "Bash(xargs -I {} basename {})"
+    ]
+  }
+}

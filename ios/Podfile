@@ -43,5 +43,81 @@ post_install do |installer|
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
     end
+
+    # Strip iCloud-injected extended attributes (com.apple.provenance,
+    # com.apple.FinderInfo, etc) from each framework's build product before
+    # codesign runs. iCloud Drive re-stamps files continuously, so a one-shot
+    # `xattr -rc` doesn't stick. This phase runs every build, AFTER Sources/
+    # Frameworks/Resources have assembled the framework, so it sits right
+    # before Xcode's implicit codesign step.
+    if target.respond_to?(:product_type) && target.product_type == 'com.apple.product-type.framework'
+      phase_name = '[Sakinah] Strip iCloud xattrs'
+      unless target.build_phases.any? { |p| p.respond_to?(:name) && p.name == phase_name }
+        phase = target.new_shell_script_build_phase(phase_name)
+        phase.shell_script = <<~SCRIPT
+          if [ -d "${TARGET_BUILD_DIR}/${WRAPPER_NAME}" ]; then
+            /usr/bin/xattr -cr "${TARGET_BUILD_DIR}/${WRAPPER_NAME}" || true
+          fi
+          if [ -d "${BUILT_PRODUCTS_DIR}" ]; then
+            /usr/bin/xattr -cr "${BUILT_PRODUCTS_DIR}" || true
+          fi
+        SCRIPT
+        # new_shell_script_build_phase appends to the end, which is what we
+        # want — runs after the framework is assembled, before codesign.
+      end
+    end
+  end
+
+  # Strip xattrs in the Runner target. We need TWO phases:
+  # (1) Pre-Flutter: runs before Flutter's "Run Script" phase, which builds
+  #     and signs App.framework + Flutter.framework. Cleans the source tree's
+  #     Flutter cache and the build output dir.
+  # (2) Pre-Embed: runs after Sources/Frameworks/Resources but before
+  #     "Embed Frameworks" + the implicit Runner.app codesign.
+  runner_project_path = File.expand_path('Runner.xcodeproj', __dir__)
+  runner_project = Xcodeproj::Project.open(runner_project_path)
+  runner_target = runner_project.targets.find { |t| t.name == 'Runner' }
+  if runner_target
+    pre_flutter_name = '[Sakinah] Strip iCloud xattrs (pre-Flutter)'
+    unless runner_target.build_phases.any? { |p| p.respond_to?(:name) && p.name == pre_flutter_name }
+      pre = runner_target.new_shell_script_build_phase(pre_flutter_name)
+      pre.shell_script = <<~SCRIPT
+        # iCloud Drive stamps com.apple.provenance / FinderInfo on every file
+        # it touches; codesign refuses to sign anything with those attributes.
+        # Strip them from everything Flutter is about to sign.
+        /usr/bin/xattr -cr "${SRCROOT}/.." 2>/dev/null || true
+        /usr/bin/xattr -cr "${BUILT_PRODUCTS_DIR}" 2>/dev/null || true
+        /usr/bin/xattr -cr "${SYMROOT}" 2>/dev/null || true
+      SCRIPT
+      # Move to position 0, before everything (including Flutter's Run Script).
+      runner_target.build_phases.delete(pre)
+      runner_target.build_phases.unshift(pre)
+    end
+
+    pre_embed_name = '[Sakinah] Strip iCloud xattrs (pre-Embed)'
+    unless runner_target.build_phases.any? { |p| p.respond_to?(:name) && p.name == pre_embed_name }
+      mid = runner_target.new_shell_script_build_phase(pre_embed_name)
+      mid.shell_script = <<~SCRIPT
+        if [ -d "${BUILT_PRODUCTS_DIR}" ]; then
+          /usr/bin/xattr -cr "${BUILT_PRODUCTS_DIR}" || true
+        fi
+        if [ -d "${TARGET_BUILD_DIR}/${WRAPPER_NAME}" ]; then
+          /usr/bin/xattr -cr "${TARGET_BUILD_DIR}/${WRAPPER_NAME}" || true
+        fi
+      SCRIPT
+      embed_index = runner_target.build_phases.index do |p|
+        p.respond_to?(:name) && p.name == 'Embed Frameworks'
+      end
+      if embed_index
+        runner_target.build_phases.delete(mid)
+        runner_target.build_phases.insert(embed_index, mid)
+      end
+    end
+
+    # Remove the old single phase from a previous attempt if present.
+    legacy = runner_target.build_phases.find { |p| p.respond_to?(:name) && p.name == '[Sakinah] Strip iCloud xattrs (Runner)' }
+    runner_target.build_phases.delete(legacy) if legacy
+
+    runner_project.save
   end
 end

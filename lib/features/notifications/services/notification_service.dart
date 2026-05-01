@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -218,18 +219,18 @@ class NotificationService {
 
       // Play the audio
       await _audioPlayer.play(AssetSource(audioPath));
-      print('Playing adhan: $audioPath');
+      debugPrint('Playing adhan: $audioPath');
     } catch (e) {
-      print('Error playing adhan: $e');
+      debugPrint('Error playing adhan: $e');
     }
   }
 
   Future<void> stopAdhan() async {
     try {
       await _audioPlayer.stop();
-      print('Stopped adhan');
+      debugPrint('Stopped adhan');
     } catch (e) {
-      print('Error stopping adhan: $e');
+      debugPrint('Error stopping adhan: $e');
     }
   }
 

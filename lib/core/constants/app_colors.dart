@@ -3,10 +3,18 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Primary Colors
+  // Primary Colors (Islamic green)
   static const emerald = Color(0xFF064E3B);
   static const emeraldLight = Color(0xFF10B981);
   static const emeraldDark = Color(0xFF022C22);
+  static const emeraldDeep = Color(0xFF0F3D30); // app scaffold backdrop
+  static const emeraldTeal = Color(0xFF1A5F4E); // dialog accents
+
+  // Accent Colors (gold) — primary highlight throughout the app
+  static const gold = Color(0xFFD4AF37);
+  static const goldDark = Color(0xFFB8941C);
+  static const goldLight = Color(0xFFE5C158);
+  static const goldOnDark = Color(0xFF0A1F1A); // text on gold backgrounds
 
   // Secondary Colors
   static const sand = Color(0xFFF3E5AB);

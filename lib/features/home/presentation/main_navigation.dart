@@ -10,6 +10,15 @@ import 'package:sakinah_flow/features/home/presentation/screens/more_screen.dart
 
 final navigationIndexProvider = StateProvider<int>((ref) => 0);
 
+const _screens = <Widget>[
+  DashboardScreen(),
+  PrayerScreen(),
+  LeaderboardScreen(),
+  HabitsScreen(),
+  ProgressScreen(),
+  MoreScreen(),
+];
+
 class MainNavigation extends HookConsumerWidget {
   const MainNavigation({super.key});
 
@@ -18,19 +27,10 @@ class MainNavigation extends HookConsumerWidget {
     final currentIndex = ref.watch(navigationIndexProvider);
     final themeColors = ref.watch(themeColorsProvider);
 
-    final screens = [
-      const DashboardScreen(),
-      const PrayerScreen(),
-      const LeaderboardScreen(),
-      const HabitsScreen(),
-      const ProgressScreen(),
-      const MoreScreen(),
-    ];
-
     return Scaffold(
       body: IndexedStack(
         index: currentIndex,
-        children: screens,
+        children: _screens,
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -54,54 +54,12 @@ class MainNavigation extends HookConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(
-                  context,
-                  ref,
-                  0,
-                  Icons.home_rounded,
-                  'Home',
-                  'الرئيسية',
-                ),
-                _buildNavItem(
-                  context,
-                  ref,
-                  1,
-                  Icons.access_time_rounded,
-                  'Prayer',
-                  'الصلاة',
-                ),
-                _buildNavItem(
-                  context,
-                  ref,
-                  2,
-                  Icons.emoji_events_rounded,
-                  'Leaders',
-                  'المتصدرين',
-                ),
-                _buildNavItem(
-                  context,
-                  ref,
-                  3,
-                  Icons.check_circle_rounded,
-                  'Habits',
-                  'العادات',
-                ),
-                _buildNavItem(
-                  context,
-                  ref,
-                  4,
-                  Icons.insights_rounded,
-                  'Progress',
-                  'التقدم',
-                ),
-                _buildNavItem(
-                  context,
-                  ref,
-                  5,
-                  Icons.menu_rounded,
-                  'More',
-                  'المزيد',
-                ),
+                _buildNavItem(ref, currentIndex, themeColors, 0, Icons.home_rounded, 'Home'),
+                _buildNavItem(ref, currentIndex, themeColors, 1, Icons.access_time_rounded, 'Prayer'),
+                _buildNavItem(ref, currentIndex, themeColors, 2, Icons.emoji_events_rounded, 'Leaders'),
+                _buildNavItem(ref, currentIndex, themeColors, 3, Icons.check_circle_rounded, 'Habits'),
+                _buildNavItem(ref, currentIndex, themeColors, 4, Icons.insights_rounded, 'Progress'),
+                _buildNavItem(ref, currentIndex, themeColors, 5, Icons.menu_rounded, 'More'),
               ],
             ),
           ),
@@ -111,21 +69,21 @@ class MainNavigation extends HookConsumerWidget {
   }
 
   Widget _buildNavItem(
-    BuildContext context,
     WidgetRef ref,
+    int currentIndex,
+    ThemeColors themeColors,
     int index,
     IconData icon,
     String label,
-    String arabicLabel,
   ) {
-    final currentIndex = ref.watch(navigationIndexProvider);
-    final themeColors = ref.watch(themeColorsProvider);
     final isSelected = currentIndex == index;
 
     return Expanded(
       child: GestureDetector(
         onTap: () => ref.read(navigationIndexProvider.notifier).state = index,
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             gradient: isSelected ? themeColors.primaryGradient : null,

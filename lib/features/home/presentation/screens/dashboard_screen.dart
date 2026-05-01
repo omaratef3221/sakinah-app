@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:sakinah_flow/core/services/asset_data_cache.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -54,22 +53,18 @@ class DashboardScreen extends HookConsumerWidget {
         return;
       }
 
-      // Get current position with high accuracy
-      final Position position = await Geolocator.getCurrentPosition(
+      // Try last-known position first — instant if available — and fall back
+      // to a fresh medium-accuracy fix. High accuracy isn't needed for
+      // prayer-time calc and is much slower on first launch.
+      Position? position = await Geolocator.getLastKnownPosition();
+      position ??= await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
+          accuracy: LocationAccuracy.medium,
           distanceFilter: 0,
         ),
       ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () async {
-          // Fallback to last known position
-          final lastPosition = await Geolocator.getLastKnownPosition();
-          if (lastPosition != null) {
-            return lastPosition;
-          }
-          throw Exception('Location timeout');
-        },
+        const Duration(seconds: 8),
+        onTimeout: () => throw Exception('Location timeout'),
       );
 
       // Get address from coordinates
@@ -282,9 +277,7 @@ class DashboardScreen extends HookConsumerWidget {
   }
 
   Future<void> _showDuaPopup(BuildContext context) async {
-    // Load duas from JSON
-    final String response = await rootBundle.loadString('assets/data/duas.json');
-    final data = json.decode(response);
+    final data = await AssetDataCache.loadJson('assets/data/duas.json');
     final List<dynamic> duasList = data['duas'];
 
     // Get random dua of the day based on current date

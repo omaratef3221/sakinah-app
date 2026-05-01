@@ -1,6 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sakinah_flow/core/services/asset_data_cache.dart';
 import 'package:sakinah_flow/core/widgets/glass_card.dart';
 
 class DuaaScreen extends StatefulWidget {
@@ -22,13 +21,14 @@ class _DuaaScreenState extends State<DuaaScreen> {
 
   Future<void> _loadDuas() async {
     try {
-      final String response = await rootBundle.loadString('assets/data/duas.json');
-      final data = json.decode(response);
+      final data = await AssetDataCache.loadJson('assets/data/duas.json');
+      if (!mounted) return;
       setState(() {
         _duas = data['duas'];
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });

@@ -48,10 +48,10 @@ class SplashScreen extends HookConsumerWidget {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     width: 2,
                   ),
                 ),
@@ -92,7 +92,7 @@ class SplashScreen extends HookConsumerWidget {
                 'Find Peace in Every Moment',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   letterSpacing: 1,
                 ),
               )
@@ -109,7 +109,7 @@ class SplashScreen extends HookConsumerWidget {
                 child: CircularProgressIndicator(
                   strokeWidth: 3,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    Colors.white.withOpacity(0.8),
+                    Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               )
@@ -123,7 +123,7 @@ class SplashScreen extends HookConsumerWidget {
                 'Loading your spiritual journey...',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
               )
                   .animate(onPlay: (controller) => controller.repeat(reverse: true))

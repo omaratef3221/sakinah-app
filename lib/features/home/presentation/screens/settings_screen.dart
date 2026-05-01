@@ -19,7 +19,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _habitReminders = true;
   String _selectedTheme = 'Green (Default)';
   String _selectedAdhan = 'Adhan 1';
-  String? _currentlyPlayingAdhan;
 
   final List<String> _themes = [
     'Green (Default)',
@@ -150,7 +149,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             _notificationsEnabled = granted;
                           });
                           if (!granted) {
-                            if (mounted) {
+                            if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Notification permission denied'),
@@ -722,7 +721,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     await NotificationService().stopAdhan();
                     setState(() {
                       _selectedAdhan = tempSelectedAdhan ?? _selectedAdhan;
-                      _currentlyPlayingAdhan = null;
                     });
                     await _saveSettings();
                     if (context.mounted) {
