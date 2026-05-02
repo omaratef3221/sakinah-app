@@ -3,15 +3,17 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sakinah_flow/features/auth/providers/auth_provider.dart';
 import 'package:sakinah_flow/features/habits/providers/habits_database_provider.dart';
 import 'package:sakinah_flow/features/sync/services/sync_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 part 'sync_provider.g.dart';
+
+const _kLastSignedInUidKey = 'auth_last_signed_in_uid';
 
 /// Owns the lifecycle of the [SyncService] for the currently signed-in user.
 ///
 /// When a user signs in, this starts sync. When they sign out, it stops.
-/// Switching users (rare — would need to sign out then sign in as someone
-/// else on the same device) tears down the old service and starts a new
-/// one for the new uid.
+/// Switching users tears down the old service, wipes local data so the new
+/// user doesn't inherit the old user's habits, and starts a fresh sync.
 @Riverpod(keepAlive: true)
 class SyncController extends _$SyncController {
   SyncService? _service;
@@ -38,7 +40,18 @@ class SyncController extends _$SyncController {
       return;
     }
 
+    // If the previous signed-in user on this device was someone else, wipe
+    // local data so user B doesn't inherit user A's local rows. Guest data
+    // (no previous uid recorded) is preserved on first sign-in so it can
+    // migrate to the new account.
+    final prefs = await SharedPreferences.getInstance();
+    final previousUid = prefs.getString(_kLastSignedInUidKey);
     final db = ref.read(habitsDatabaseProvider);
+    if (previousUid != null && previousUid != newUid) {
+      await db.wipeAllLocalData();
+    }
+    await prefs.setString(_kLastSignedInUidKey, newUid);
+
     final service = SyncService(database: db, uid: newUid);
     _service = service;
 

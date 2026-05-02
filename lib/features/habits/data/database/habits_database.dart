@@ -456,10 +456,14 @@ class HabitsDatabase extends _$HabitsDatabase {
     // 1. Match by remoteId first.
     var existing = await getCompletionByRemoteId(remoteId);
 
-    // 2. Fallback: match by (habitId, day). This catches the case where a
-    //    local insert hasn't been pushed yet (no remoteId) but the same
-    //    completion arrives from another device. Without this, we'd insert
-    //    a duplicate row for the same day.
+    // 2. Fallback: match by (habitId, day) regardless of deletedAt. This
+    //    catches:
+    //    a) a local insert that hasn't been pushed yet (no remoteId) and
+    //       the same completion arrives from another device — without this
+    //       we'd insert a duplicate
+    //    b) a remote tombstone (deletedAt set) for a row that was created
+    //       locally — we need to find the live row to mark it deleted, not
+    //       insert a new deleted row alongside it
     if (existing == null && data.habitId.present && data.completedAt.present) {
       final habitId = data.habitId.value;
       final completedAt = data.completedAt.value;
@@ -471,8 +475,8 @@ class HabitsDatabase extends _$HabitsDatabase {
             ..where((c) =>
                 c.habitId.equals(habitId) &
                 c.completedAt.isBiggerOrEqualValue(startOfDay) &
-                c.completedAt.isSmallerOrEqualValue(endOfDay) &
-                c.deletedAt.isNull())
+                c.completedAt.isSmallerOrEqualValue(endOfDay))
+            ..orderBy([(c) => OrderingTerm.asc(c.id)])
             ..limit(1))
           .getSingleOrNull();
     }

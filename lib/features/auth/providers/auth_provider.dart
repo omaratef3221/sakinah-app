@@ -37,3 +37,16 @@ class GuestMode extends _$GuestMode {
     state = AsyncData(value);
   }
 }
+
+/// Bumps when we force-reload the current FirebaseUser (e.g. to pick up
+/// `emailVerified` after the user clicks the verification link).
+/// FirebaseAuth's authStateChanges() does NOT fire on reload(), so widgets
+/// that need to react to verified-status changes should watch this in
+/// addition to authStateChangesProvider.
+@Riverpod(keepAlive: true)
+class AuthRefreshTick extends _$AuthRefreshTick {
+  @override
+  int build() => 0;
+
+  void bump() => state = state + 1;
+}

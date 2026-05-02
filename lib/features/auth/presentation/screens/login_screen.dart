@@ -64,6 +64,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
+    // If this screen was pushed on top of MainNavigation (e.g. from the
+    // guest banner) and the user signs in, pop it so they land back on
+    // their dashboard. AuthGate handles the case where this is the root.
+    ref.listen(authStateChangesProvider, (prev, next) {
+      final user = next.valueOrNull;
+      if (user != null && Navigator.of(context).canPop()) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    });
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(gradient: themeColors.backgroundGradient),

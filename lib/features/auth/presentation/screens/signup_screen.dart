@@ -75,6 +75,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
 
+    // Pop back to first route when sign-in succeeds (covers Apple/Google
+    // social sign-in from this screen too).
+    ref.listen(authStateChangesProvider, (prev, next) {
+      final user = next.valueOrNull;
+      if (user != null && Navigator.of(context).canPop()) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,

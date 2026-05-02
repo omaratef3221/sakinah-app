@@ -108,70 +108,85 @@ class SyncService {
 
     if (habits.isEmpty && completions.isEmpty) return;
 
-    // Use a batch where possible (max 500 writes per batch).
-    final batch = _firestore.batch();
-    final habitWrites = <Future<void> Function()>[];
+    // Step 1: Assign remoteIds for any new habits and persist them locally
+    // BEFORE we try to map completions. Completions reference habitRemoteId,
+    // so this avoids the first-sync ordering bug where a brand-new habit and
+    // its first completion are pushed together — the completion would
+    // otherwise see habit.remoteId == null and get skipped.
+    _suppressLocalPush = true;
+    final habitDocRefs = <int, DocumentReference<Map<String, dynamic>>>{};
+    try {
+      for (final habit in habits) {
+        final remoteId = habit.remoteId;
+        final ref = remoteId != null
+            ? _habitsRef.doc(remoteId)
+            : _habitsRef.doc();
+        habitDocRefs[habit.id] = ref;
+        if (remoteId == null) {
+          await _db.setHabitRemoteId(habit.id, ref.id);
+        }
+      }
+    } finally {
+      _suppressLocalPush = false;
+    }
 
+    // Step 2: Build the batch.
+    final batch = _firestore.batch();
+    var maxUpdatedAt = since;
     for (final habit in habits) {
-      final remoteId = habit.remoteId;
-      final docRef =
-          remoteId != null ? _habitsRef.doc(remoteId) : _habitsRef.doc();
+      final docRef = habitDocRefs[habit.id]!;
       batch.set(docRef, _habitToMap(habit), SetOptions(merge: true));
-      if (remoteId == null) {
-        // We assigned a new doc id; persist it locally so next sync uses it.
-        habitWrites.add(() async {
-          _suppressLocalPush = true;
-          try {
-            await _db.setHabitRemoteId(habit.id, docRef.id);
-          } finally {
-            _suppressLocalPush = false;
-          }
-        });
+      if (habit.updatedAt.isAfter(maxUpdatedAt)) {
+        maxUpdatedAt = habit.updatedAt;
       }
     }
 
-    final completionWrites = <Future<void> Function()>[];
+    final completionDocRefs =
+        <int, DocumentReference<Map<String, dynamic>>>{};
+    final completionMaps = <int, Map<String, dynamic>>{};
     for (final completion in completions) {
+      // Re-read habit to pick up the freshly-set remoteId from step 1.
+      final habit = await _db.getHabitById(completion.habitId);
+      final habitRemoteId = habit?.remoteId;
+      if (habitRemoteId == null) {
+        // Habit was hard-deleted between the read and now — skip orphan.
+        continue;
+      }
       final remoteId = completion.remoteId;
       final docRef = remoteId != null
           ? _completionsRef.doc(remoteId)
           : _completionsRef.doc();
-      // Find remote habit ID — we need to map local habitId -> remote habitId.
-      final habit = await _db.getHabitById(completion.habitId);
-      final habitRemoteId = habit?.remoteId;
-      if (habitRemoteId == null) {
-        // Habit hasn't been pushed yet (first-ever sync ordering). Skip;
-        // it'll be picked up next push cycle once the habit has a remoteId.
-        continue;
-      }
-      batch.set(
-        docRef,
-        _completionToMap(completion, habitRemoteId: habitRemoteId),
-        SetOptions(merge: true),
-      );
-      if (remoteId == null) {
-        completionWrites.add(() async {
-          _suppressLocalPush = true;
-          try {
-            await _db.setCompletionRemoteId(completion.id, docRef.id);
-          } finally {
-            _suppressLocalPush = false;
-          }
-        });
+      completionDocRefs[completion.id] = docRef;
+      completionMaps[completion.id] =
+          _completionToMap(completion, habitRemoteId: habitRemoteId);
+      batch.set(docRef, completionMaps[completion.id]!, SetOptions(merge: true));
+      if (completion.updatedAt.isAfter(maxUpdatedAt)) {
+        maxUpdatedAt = completion.updatedAt;
       }
     }
 
     await batch.commit();
 
-    // Persist the new remoteIds locally now that the server accepted them.
-    for (final w in habitWrites) {
-      await w();
-    }
-    for (final w in completionWrites) {
-      await w();
+    // Step 3: Persist completion remoteIds for new docs.
+    _suppressLocalPush = true;
+    try {
+      for (final completion in completions) {
+        if (completion.remoteId == null) {
+          final ref = completionDocRefs[completion.id];
+          if (ref != null) {
+            await _db.setCompletionRemoteId(completion.id, ref.id);
+          }
+        }
+      }
+    } finally {
+      _suppressLocalPush = false;
     }
 
-    await _writeLastSyncedAt(DateTime.now());
+    // Step 4: Advance lastSyncedAt to the MAX updatedAt we just pushed —
+    // not local "now". Using local "now" would mark rows still-being-edited
+    // (whose updatedAt is between query-time and now-time) as already synced
+    // and they'd never get pushed.
+    await _writeLastSyncedAt(maxUpdatedAt);
   }
 
   // ---------------- Pull (Firestore -> Drift) ----------------

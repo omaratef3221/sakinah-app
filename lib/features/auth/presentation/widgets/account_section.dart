@@ -16,7 +16,14 @@ class AccountSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authStateChangesProvider).valueOrNull;
+    // Watch both: authStateChanges fires on sign-in/out, refreshTick fires
+    // when we reload the user to pick up emailVerified after verification.
+    final streamUser = ref.watch(authStateChangesProvider).valueOrNull;
+    ref.watch(authRefreshTickProvider);
+    // Read the live FirebaseAuth.currentUser so we always show the freshest
+    // emailVerified flag (the stream caches the User object).
+    final liveUser = ref.read(authRepositoryProvider).currentUser;
+    final user = liveUser ?? streamUser;
 
     if (user == null) {
       return const _GuestCard();
@@ -152,14 +159,9 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
         await ref.read(authRepositoryProvider).deleteAccount();
       } on AuthFailure catch (e) {
         if (e.code == 'requires-recent-login') {
-          // Re-auth via the original provider, then retry.
-          try {
-            await ref.read(authRepositoryProvider).reauthenticate();
-            await ref.read(authRepositoryProvider).deleteAccount();
-          } on AuthFailure catch (e2) {
-            _showError(e2.message);
-            return;
-          }
+          final reauthed = await _reauthCurrentUser();
+          if (!reauthed) return; // user cancelled or failed
+          await ref.read(authRepositoryProvider).deleteAccount();
         } else {
           rethrow;
         }
@@ -181,6 +183,87 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Re-authenticates the current user via the appropriate flow for their
+  /// sign-in provider. For password users this prompts for the password
+  /// inline. Returns true on success, false if the user cancelled or
+  /// re-auth failed (the failure has already been shown via snackbar).
+  Future<bool> _reauthCurrentUser() async {
+    final providerId = widget.user.providerData.isNotEmpty
+        ? widget.user.providerData.first.providerId
+        : 'password';
+    try {
+      if (providerId == 'password') {
+        final password = await _promptForPassword();
+        if (password == null || password.isEmpty) return false;
+        await ref
+            .read(authRepositoryProvider)
+            .reauthenticateWithPassword(password);
+      } else {
+        // Apple / Google: re-running the sign-in flow performs reauth.
+        await ref.read(authRepositoryProvider).reauthenticate();
+      }
+      return true;
+    } on AuthFailure catch (e) {
+      if (e.code == 'cancelled') return false;
+      _showError(e.message);
+      return false;
+    } catch (e) {
+      _showError('Could not re-authenticate: $e');
+      return false;
+    }
+  }
+
+  Future<String?> _promptForPassword() async {
+    final controller = TextEditingController();
+    bool obscure = true;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Confirm your password'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'For security, please enter your password to confirm account deletion.',
+                style: TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                obscureText: obscure,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  suffixIcon: IconButton(
+                    icon: Icon(obscure
+                        ? Icons.visibility_rounded
+                        : Icons.visibility_off_rounded),
+                    onPressed: () =>
+                        setDialogState(() => obscure = !obscure),
+                  ),
+                ),
+                onSubmitted: (v) => Navigator.of(context).pop(v),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(controller.text),
+              child: const Text('Confirm'),
+            ),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
+    return result;
   }
 
   Future<bool> _confirmDialog({
@@ -370,11 +453,11 @@ class _VerifyEmailRowState extends ConsumerState<_VerifyEmailRow> {
     try {
       // Firebase caches the verified flag locally; reload pulls fresh state.
       await ref.read(authRepositoryProvider).reloadCurrentUser();
-      // authStateChanges doesn't fire on reload(), so toggle via signOut/in
-      // is overkill — instead just rebuild the watching widgets manually.
-      // The simplest reliable nudge: invalidate the auth-state stream so
-      // ConsumerWidgets re-read currentUser.
-      ref.invalidate(authStateChangesProvider);
+      // authStateChanges() does NOT fire on reload(). Bump our tick to
+      // force AccountSection to rebuild with the now-updated currentUser.
+      // (Don't invalidate authStateChangesProvider — that would tear down
+      // every Firestore listener wired to it via SyncController.)
+      ref.read(authRefreshTickProvider.notifier).bump();
 
       if (!mounted) return;
       final verified =
