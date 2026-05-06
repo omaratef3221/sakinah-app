@@ -44,6 +44,15 @@ class SyncService {
   // which would otherwise trigger another local change -> another push).
   bool _suppressLocalPush = false;
 
+  // Mutex preventing concurrent _pushPendingLocalChanges calls. Without
+  // this, a fast-firing debounce or a manual resync racing the timer could
+  // both query the same rows, both set new remoteIds, and create duplicate
+  // Firestore docs.
+  Future<void>? _activePush;
+
+  // Max writes per Firestore batch (Firestore's hard limit is 500).
+  static const int _batchChunkSize = 400;
+
   String get _lastSyncedAtKey => 'sync_last_synced_at_$uid';
 
   CollectionReference<Map<String, dynamic>> get _habitsRef =>
@@ -102,16 +111,53 @@ class SyncService {
   }
 
   Future<void> _pushPendingLocalChanges() async {
+    // Mutex: if a push is already running, wait for it and return — no
+    // need to re-run since the in-flight push already covers our changes.
+    if (_activePush != null) {
+      await _activePush;
+      return;
+    }
+    final completer = Completer<void>();
+    _activePush = completer.future;
+    try {
+      await _pushPendingLocalChangesInner();
+      completer.complete();
+    } catch (e) {
+      completer.completeError(e);
+      rethrow;
+    } finally {
+      _activePush = null;
+    }
+  }
+
+  Future<void> _pushPendingLocalChangesInner() async {
     final since = await _readLastSyncedAt();
+
+    // Snapshot the cutoff BEFORE reading. We'll use this as the next
+    // lastSyncedAt — so any row written after this snapshot (with a
+    // higher updatedAt) is guaranteed to be picked up next cycle.
+    // Drift stores DateTime as Unix-seconds, so we round down: any row
+    // written within this same second is still > since (since we read with
+    // strict `>`). This is correct because we read with `> since`, so we
+    // catch all rows since the last cutoff.
+    final cutoff = DateTime.now();
+
     final habits = await _db.getHabitsUpdatedSince(since);
     final completions = await _db.getCompletionsUpdatedSince(since);
 
-    if (habits.isEmpty && completions.isEmpty) return;
+    if (habits.isEmpty && completions.isEmpty) {
+      // Even with nothing to push, advance the cutoff so we don't re-read
+      // the same window forever once the user idles.
+      if (cutoff.isAfter(since)) {
+        await _writeLastSyncedAt(cutoff);
+      }
+      return;
+    }
 
     // Step 1: Assign remoteIds for any new habits and persist them locally
-    // BEFORE we try to map completions. Completions reference habitRemoteId,
-    // so this avoids the first-sync ordering bug where a brand-new habit and
-    // its first completion are pushed together — the completion would
+    // BEFORE the batch is built. Completions reference habitRemoteId, so
+    // this avoids the first-sync ordering bug where a new habit and its
+    // first completion are pushed together — the completion would
     // otherwise see habit.remoteId == null and get skipped.
     _suppressLocalPush = true;
     final habitDocRefs = <int, DocumentReference<Map<String, dynamic>>>{};
@@ -130,63 +176,73 @@ class SyncService {
       _suppressLocalPush = false;
     }
 
-    // Step 2: Build the batch.
-    final batch = _firestore.batch();
-    var maxUpdatedAt = since;
-    for (final habit in habits) {
-      final docRef = habitDocRefs[habit.id]!;
-      batch.set(docRef, _habitToMap(habit), SetOptions(merge: true));
-      if (habit.updatedAt.isAfter(maxUpdatedAt)) {
-        maxUpdatedAt = habit.updatedAt;
-      }
-    }
-
+    // Step 2: Pre-assign completion remoteIds and persist them locally.
+    // Doing this BEFORE the batch.commit means: if commit fails (network,
+    // permission), the next retry uses the same docRefs instead of
+    // generating new ones — so we never duplicate Firestore docs.
+    _suppressLocalPush = true;
     final completionDocRefs =
         <int, DocumentReference<Map<String, dynamic>>>{};
-    final completionMaps = <int, Map<String, dynamic>>{};
-    for (final completion in completions) {
-      // Re-read habit to pick up the freshly-set remoteId from step 1.
-      final habit = await _db.getHabitById(completion.habitId);
-      final habitRemoteId = habit?.remoteId;
-      if (habitRemoteId == null) {
-        // Habit was hard-deleted between the read and now — skip orphan.
-        continue;
-      }
-      final remoteId = completion.remoteId;
-      final docRef = remoteId != null
-          ? _completionsRef.doc(remoteId)
-          : _completionsRef.doc();
-      completionDocRefs[completion.id] = docRef;
-      completionMaps[completion.id] =
-          _completionToMap(completion, habitRemoteId: habitRemoteId);
-      batch.set(docRef, completionMaps[completion.id]!, SetOptions(merge: true));
-      if (completion.updatedAt.isAfter(maxUpdatedAt)) {
-        maxUpdatedAt = completion.updatedAt;
-      }
-    }
-
-    await batch.commit();
-
-    // Step 3: Persist completion remoteIds for new docs.
-    _suppressLocalPush = true;
+    final completionsToPush = <HabitCompletion>[];
+    final habitRemoteIdByCompletion = <int, String>{};
     try {
       for (final completion in completions) {
-        if (completion.remoteId == null) {
-          final ref = completionDocRefs[completion.id];
-          if (ref != null) {
-            await _db.setCompletionRemoteId(completion.id, ref.id);
-          }
+        final habit = await _db.getHabitById(completion.habitId);
+        final habitRemoteId = habit?.remoteId;
+        if (habitRemoteId == null) {
+          // Orphan completion (habit hard-deleted). Skip — it'll be cleaned
+          // up by a future pass or never matter since the habit is gone.
+          continue;
+        }
+        final remoteId = completion.remoteId;
+        final ref = remoteId != null
+            ? _completionsRef.doc(remoteId)
+            : _completionsRef.doc();
+        completionDocRefs[completion.id] = ref;
+        habitRemoteIdByCompletion[completion.id] = habitRemoteId;
+        completionsToPush.add(completion);
+        if (remoteId == null) {
+          await _db.setCompletionRemoteId(completion.id, ref.id);
         }
       }
     } finally {
       _suppressLocalPush = false;
     }
 
-    // Step 4: Advance lastSyncedAt to the MAX updatedAt we just pushed —
-    // not local "now". Using local "now" would mark rows still-being-edited
-    // (whose updatedAt is between query-time and now-time) as already synced
-    // and they'd never get pushed.
-    await _writeLastSyncedAt(maxUpdatedAt);
+    // Step 3: Build and commit the batch(es). Firestore caps a batch at
+    // 500 ops; we chunk at [_batchChunkSize] to stay well under.
+    final ops = <_PendingWrite>[];
+    for (final habit in habits) {
+      ops.add(_PendingWrite(
+        habitDocRefs[habit.id]!,
+        _habitToMap(habit),
+      ));
+    }
+    for (final completion in completionsToPush) {
+      ops.add(_PendingWrite(
+        completionDocRefs[completion.id]!,
+        _completionToMap(
+          completion,
+          habitRemoteId: habitRemoteIdByCompletion[completion.id]!,
+        ),
+      ));
+    }
+
+    for (var i = 0; i < ops.length; i += _batchChunkSize) {
+      final end = (i + _batchChunkSize) > ops.length
+          ? ops.length
+          : i + _batchChunkSize;
+      final batch = _firestore.batch();
+      for (final op in ops.sublist(i, end)) {
+        batch.set(op.ref, op.data, SetOptions(merge: true));
+      }
+      await batch.commit();
+    }
+
+    // Step 4: Advance lastSyncedAt to our pre-read cutoff. This is safe
+    // because we read with strict `>`: any row written *after* the cutoff
+    // has updatedAt > cutoff and will be picked up next cycle.
+    await _writeLastSyncedAt(cutoff);
   }
 
   // ---------------- Pull (Firestore -> Drift) ----------------
@@ -364,27 +420,47 @@ class SyncService {
 
   /// Deletes all of the user's Firestore data. Caller is responsible for
   /// then deleting the FirebaseAuth account.
-  Future<void> deleteAllRemoteData() async {
-    // Firestore deletes are not transactional across collections, so we
-    // batch in chunks of 500.
+  /// Static so it can run even when no [SyncService] is alive (e.g. the
+  /// user signs in offline, then asks to delete their account before sync
+  /// has had a chance to start).
+  static Future<void> deleteAllRemoteDataFor({
+    required String uid,
+    FirebaseFirestore? firestore,
+  }) async {
+    final fs = firestore ?? FirebaseFirestore.instance;
+    final habitsRef =
+        fs.collection('users').doc(uid).collection('habits');
+    final completionsRef =
+        fs.collection('users').doc(uid).collection('completions');
     Future<void> deleteCollection(
       CollectionReference<Map<String, dynamic>> ref,
     ) async {
       while (true) {
-        final snap = await ref.limit(400).get();
+        final snap = await ref.limit(_batchChunkSize).get();
         if (snap.docs.isEmpty) break;
-        final batch = _firestore.batch();
+        final batch = fs.batch();
         for (final doc in snap.docs) {
           batch.delete(doc.reference);
         }
         await batch.commit();
-        if (snap.docs.length < 400) break;
+        if (snap.docs.length < _batchChunkSize) break;
       }
     }
 
-    await deleteCollection(_completionsRef);
-    await deleteCollection(_habitsRef);
+    await deleteCollection(completionsRef);
+    await deleteCollection(habitsRef);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_lastSyncedAtKey);
+    await prefs.remove('sync_last_synced_at_$uid');
   }
+
+  Future<void> deleteAllRemoteData() async {
+    await deleteAllRemoteDataFor(uid: uid, firestore: _firestore);
+  }
+}
+
+/// Single Firestore set() operation, batched up by [SyncService].
+class _PendingWrite {
+  final DocumentReference<Map<String, dynamic>> ref;
+  final Map<String, dynamic> data;
+  _PendingWrite(this.ref, this.data);
 }

@@ -131,134 +131,160 @@ class HabitsDatabase extends _$HabitsDatabase {
     return (delete(habits)..where((h) => h.id.equals(id))).go();
   }
 
-  // Update habit streak (increment)
+  // Mark a habit as complete for today and update its streak.
+  //
+  // Streak rules:
+  //   - First-ever completion (no prior `lastCompleted` AND no completion
+  //     rows): streak becomes 1.
+  //   - Completed yesterday: streak += 1.
+  //   - Completed today already: no-op (early return).
+  //   - Missed at least one day, not shielded: streak resets to 1.
+  //   - Shielded: streak preserved (Travel/Illness mode).
+  //
+  // The streak is recomputed from the completion-history table on every
+  // call, so it stays correct even if `lastCompleted` got out of sync.
+  // Wrapped in a transaction so UI watchers see one atomic update — no
+  // intermediate "completed but old streak" flash.
   Future<void> completeHabit(int id) async {
-    final habit = await getHabitById(id);
-    if (habit == null) return;
+    await transaction(() async {
+      final habit = await getHabitById(id);
+      if (habit == null) return;
 
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final lastCompleted = habit.lastCompleted;
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
 
-    // Check if already completed today
-    final completedToday = await isCompletedOnDate(id, today);
-    if (completedToday) return; // Don't complete again
+      // Idempotency guard: already completed today.
+      final completedToday = await isCompletedOnDate(id, today);
+      if (completedToday) return;
 
-    int newStreak = habit.currentStreak;
-    int newBestStreak = habit.bestStreak;
-
-    if (lastCompleted != null) {
-      final lastDay = DateTime(lastCompleted.year, lastCompleted.month, lastCompleted.day);
-      final yesterday = DateTime(now.year, now.month, now.day - 1);
-
-      // If completed yesterday, increment streak
-      if (lastDay.isAtSameMomentAs(yesterday)) {
-        newStreak = habit.currentStreak + 1;
-      }
-      // If completed today (shouldn't happen due to check above)
-      else if (lastDay.isAtSameMomentAs(today)) {
-        newStreak = habit.currentStreak;
-      }
-      // If missed days and not shielded, reset to 1
-      else if (!habit.isShielded) {
-        newStreak = 1;
-      }
-      // If shielded, keep the current streak
-      else {
-        newStreak = habit.currentStreak;
-      }
-    } else {
-      // First time completing
-      newStreak = 1;
-    }
-
-    // Update best streak if current is higher
-    if (newStreak > newBestStreak) {
-      newBestStreak = newStreak;
-    }
-
-    // Add completion record
-    await into(habitCompletions).insert(
-      HabitCompletionsCompanion.insert(
-        habitId: id,
-        completedAt: today,
-        updatedAt: Value(now),
-      ),
-    );
-
-    // Update habit streak
-    await (update(habits)..where((h) => h.id.equals(id))).write(
-      HabitsCompanion(
-        currentStreak: Value(newStreak),
-        bestStreak: Value(newBestStreak),
-        lastCompleted: Value(now),
-        updatedAt: Value(now),
-      ),
-    );
-  }
-
-  // Uncomplete a habit (remove today's completion)
-  Future<void> uncompleteHabit(int id) async {
-    final habit = await getHabitById(id);
-    if (habit == null) return;
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    // Check if completed today
-    final completedToday = await isCompletedOnDate(id, today);
-    if (!completedToday) return; // Nothing to uncomplete
-
-    // Soft-delete today's completion record
-    await deleteCompletion(id, today);
-
-    // Recalculate streak based on remaining (non-deleted) completions
-    final completions = await getCompletionsForHabit(id);
-
-    int newStreak = 0;
-    DateTime? newLastCompleted;
-
-    if (completions.isNotEmpty) {
-      newLastCompleted = completions.first.completedAt;
-
-      // Calculate streak from most recent completion backwards
-      final sortedCompletions = completions.toList()
-        ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
-
-      DateTime expectedDate = DateTime(
-        sortedCompletions.first.completedAt.year,
-        sortedCompletions.first.completedAt.month,
-        sortedCompletions.first.completedAt.day,
+      // Insert today's completion FIRST so the recompute below sees it.
+      await into(habitCompletions).insert(
+        HabitCompletionsCompanion.insert(
+          habitId: id,
+          completedAt: today,
+          updatedAt: Value(now),
+        ),
       );
 
-      for (final completion in sortedCompletions) {
-        final completionDate = DateTime(
-          completion.completedAt.year,
-          completion.completedAt.month,
-          completion.completedAt.day,
-        );
+      var newStreak = await _computeStreakFromHistory(id, habit.isShielded);
 
-        if (completionDate.isAtSameMomentAs(expectedDate) ||
-            (habit.isShielded && completionDate.isBefore(expectedDate))) {
-          newStreak++;
-          expectedDate = DateTime(
-            expectedDate.year,
-            expectedDate.month,
-            expectedDate.day - 1,
-          );
-        } else if (!habit.isShielded) {
-          break;
+      // Sync-race guard: if the persisted streak was higher than the
+      // history-derived streak, AND the persisted `lastCompleted` says
+      // the user was on a streak (today or yesterday), trust the persisted
+      // streak and add 1. This covers the case where habits synced down
+      // from another device but their historical completion rows haven't
+      // pulled yet — we don't want a tap to nuke a 30-day streak just
+      // because the rows are still in transit.
+      final lc = habit.lastCompleted;
+      if (lc != null && habit.currentStreak >= newStreak) {
+        final lcDay = DateTime(lc.year, lc.month, lc.day);
+        final daysAgo = today.difference(lcDay).inDays;
+        if (daysAgo == 0) {
+          // Already counted as on-streak; keep persisted.
+          newStreak = habit.currentStreak > newStreak
+              ? habit.currentStreak
+              : newStreak;
+        } else if (daysAgo == 1) {
+          // Persisted lastCompleted = yesterday: today's tap continues it.
+          final continued = habit.currentStreak + 1;
+          if (continued > newStreak) newStreak = continued;
         }
+        // daysAgo > 1 with non-shielded: streak is genuinely broken — let
+        // newStreak (history-based) win, which will be 1 (just today).
+      }
+
+      final newBestStreak =
+          newStreak > habit.bestStreak ? newStreak : habit.bestStreak;
+
+      await (update(habits)..where((h) => h.id.equals(id))).write(
+        HabitsCompanion(
+          currentStreak: Value(newStreak),
+          bestStreak: Value(newBestStreak),
+          lastCompleted: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+    });
+  }
+
+  // Walk the completion history backwards from today and count consecutive
+  // days. Shielded habits tolerate gaps (don't break the streak).
+  //
+  // Dedupes by day before walking — sync can produce transient duplicates
+  // for the same (habit, day) and we don't want to undercount.
+  //
+  // Used by both [completeHabit] and [uncompleteHabit] — keeping the math
+  // in one place avoids the two paths drifting out of sync.
+  Future<int> _computeStreakFromHistory(int habitId, bool isShielded) async {
+    final completions = await getCompletionsForHabit(habitId);
+    if (completions.isEmpty) return 0;
+
+    // Collapse to a sorted set of unique day-keys (most recent first).
+    final uniqueDays = <DateTime>{};
+    for (final c in completions) {
+      uniqueDays.add(
+        DateTime(c.completedAt.year, c.completedAt.month, c.completedAt.day),
+      );
+    }
+    final days = uniqueDays.toList()..sort((a, b) => b.compareTo(a));
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final mostRecent = days.first;
+
+    // If the most recent completion isn't today or yesterday, the streak
+    // is already broken — return 0 (the user is not currently on a streak).
+    final daysAgo = today.difference(mostRecent).inDays;
+    if (daysAgo > 1 && !isShielded) return 0;
+
+    var streak = 0;
+    var expected = mostRecent;
+    for (final day in days) {
+      if (day.isAtSameMomentAs(expected)) {
+        streak++;
+        expected = expected.subtract(const Duration(days: 1));
+      } else if (isShielded && day.isBefore(expected)) {
+        // Shielded: skip the gap, count this completion.
+        streak++;
+        expected = day.subtract(const Duration(days: 1));
+      } else {
+        break;
       }
     }
+    return streak;
+  }
 
-    await (update(habits)..where((h) => h.id.equals(id))).write(
-      HabitsCompanion(
-        currentStreak: Value(newStreak),
-        lastCompleted: Value(newLastCompleted),
-        updatedAt: Value(now),
-      ),
-    );
+  // Remove today's completion and recompute the streak from history.
+  // Wrapped in a transaction so UI sees one atomic update.
+  Future<void> uncompleteHabit(int id) async {
+    await transaction(() async {
+      final habit = await getHabitById(id);
+      if (habit == null) return;
+
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      final completedToday = await isCompletedOnDate(id, today);
+      if (!completedToday) return;
+
+      await deleteCompletion(id, today);
+
+      final newStreak = await _computeStreakFromHistory(id, habit.isShielded);
+
+      // Most recent remaining completion (after the soft-delete) is the new
+      // lastCompleted, or null if there are no completions left.
+      final remaining = await getCompletionsForHabit(id);
+      final newLastCompleted =
+          remaining.isEmpty ? null : remaining.first.completedAt;
+
+      await (update(habits)..where((h) => h.id.equals(id))).write(
+        HabitsCompanion(
+          currentStreak: Value(newStreak),
+          lastCompleted: Value(newLastCompleted),
+          updatedAt: Value(now),
+        ),
+      );
+    });
   }
 
   // Reset habit streak (when shield is removed and days were missed)
@@ -481,12 +507,14 @@ class HabitsDatabase extends _$HabitsDatabase {
           .getSingleOrNull();
     }
 
+    int? affectedHabitId;
     if (existing == null) {
       final companion = data.copyWith(
         remoteId: Value(remoteId),
         updatedAt: Value(remoteUpdatedAt),
       );
       await into(habitCompletions).insert(companion);
+      if (data.habitId.present) affectedHabitId = data.habitId.value;
     } else {
       // Always claim the remoteId on the existing row (even if remote isn't
       // newer) so future updates to this row find it by remoteId.
@@ -498,12 +526,59 @@ class HabitsDatabase extends _$HabitsDatabase {
         await (update(habitCompletions)..where((c) => c.id.equals(existing!.id)))
             .write(data.copyWith(updatedAt: Value(remoteUpdatedAt)));
       }
+      affectedHabitId = existing.habitId;
+    }
+
+    // After a remote completion is applied, recompute the habit's streak
+    // and `lastCompleted` from the actual history. Otherwise a sync race
+    // (user taps "complete" on a habit before its remote completions have
+    // finished pulling) can leave currentStreak stale — the local tap
+    // recomputed against an empty/partial history and overwrote the synced
+    // streak. Recomputing here corrects it as soon as the data arrives.
+    if (affectedHabitId != null) {
+      await _recomputeStreakAndLastCompleted(affectedHabitId);
     }
   }
 
-  // Hard-delete duplicate completion rows for the same (habitId, day),
-  // keeping the oldest one. Run once at startup to clean up any rows
-  // produced by the pre-fix sync race.
+  // Recompute `currentStreak` and `lastCompleted` from the completion
+  // history. Used by sync after pulling completions. Does NOT change
+  // `bestStreak` (best is monotonic) and does NOT bump `updatedAt` — so
+  // the recompute itself doesn't push back into Firestore as a "user
+  // change". The streak/lastCompleted field that comes down from the
+  // other device gets stamped in by `_applyRemoteHabit`; this is just a
+  // local consistency pass.
+  Future<void> _recomputeStreakAndLastCompleted(int habitId) async {
+    final habit = await getHabitById(habitId);
+    if (habit == null) return;
+    final newStreak = await _computeStreakFromHistory(habitId, habit.isShielded);
+    final completions = await getCompletionsForHabit(habitId);
+    final newLastCompleted =
+        completions.isEmpty ? null : completions.first.completedAt;
+    final newBestStreak =
+        newStreak > habit.bestStreak ? newStreak : habit.bestStreak;
+
+    // Only write if something actually changed, to avoid re-firing watchers
+    // and re-triggering a needless sync push.
+    if (newStreak == habit.currentStreak &&
+        newLastCompleted == habit.lastCompleted &&
+        newBestStreak == habit.bestStreak) {
+      return;
+    }
+
+    await (update(habits)..where((h) => h.id.equals(habitId))).write(
+      HabitsCompanion(
+        currentStreak: Value(newStreak),
+        bestStreak: Value(newBestStreak),
+        lastCompleted: Value(newLastCompleted),
+      ),
+    );
+  }
+
+  // Soft-delete duplicate completion rows for the same (habitId, day),
+  // keeping the row with the lowest id. The soft-delete propagates via
+  // sync, so the orphan Firestore docs eventually get tombstoned too.
+  // Run once at startup as a defensive sweep — a no-op once everything
+  // is clean.
   Future<int> dedupeCompletions() async {
     final all = await (select(habitCompletions)
           ..where((c) => c.deletedAt.isNull())
@@ -519,7 +594,13 @@ class HabitsDatabase extends _$HabitsDatabase {
       }
     }
     if (dupeIds.isEmpty) return 0;
-    await (delete(habitCompletions)..where((c) => c.id.isIn(dupeIds))).go();
+    final now = DateTime.now();
+    await (update(habitCompletions)..where((c) => c.id.isIn(dupeIds))).write(
+      HabitCompletionsCompanion(
+        deletedAt: Value(now),
+        updatedAt: Value(now),
+      ),
+    );
     return dupeIds.length;
   }
 

@@ -42,16 +42,20 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             displayName: _nameController.text.trim(),
           );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      // Capture the root messenger BEFORE popping — otherwise the snackbar
+      // attaches to this screen's messenger and is dismissed instantly.
+      final rootMessenger = ScaffoldMessenger.maybeOf(
+        Navigator.of(context, rootNavigator: true).context,
+      ) ??
+          ScaffoldMessenger.of(context);
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      rootMessenger.showSnackBar(
         const SnackBar(
           content: Text(
               'Account created. Check your email for a verification link.'),
           backgroundColor: Color(0xFF10B981),
         ),
       );
-      // AuthGate will swap to MainNavigation automatically — pop the
-      // signup -> login stack just to be tidy.
-      Navigator.of(context).popUntil((route) => route.isFirst);
     } on AuthFailure catch (e) {
       _showError(e.message);
     } catch (e) {

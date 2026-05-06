@@ -47,7 +47,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _continueAsGuest() async {
-    await ref.read(guestModeProvider.notifier).set(true);
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await ref.read(guestModeProvider.notifier).set(true);
+      // If LoginScreen was pushed on top of MainNavigation (e.g. from the
+      // guest banner), pop ourselves so we don't sit invisible above it.
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+      // If we're the root (AuthGate child), AuthGate will rebuild and
+      // swap us out for MainNavigation automatically.
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   void _showError(String message) {

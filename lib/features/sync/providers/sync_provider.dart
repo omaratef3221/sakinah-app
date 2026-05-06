@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 part 'sync_provider.g.dart';
 
-const _kLastSignedInUidKey = 'auth_last_signed_in_uid';
+const kLastSignedInUidKey = 'auth_last_signed_in_uid';
 
 /// Owns the lifecycle of the [SyncService] for the currently signed-in user.
 ///
@@ -28,6 +28,8 @@ class SyncController extends _$SyncController {
     // No-op if uid hasn't actually changed.
     if (newUid == _activeUid) return;
 
+    final wasSignedIn = _activeUid != null;
+
     // Tear down previous service.
     if (_service != null) {
       await _service!.stop();
@@ -35,8 +37,18 @@ class SyncController extends _$SyncController {
     }
     _activeUid = newUid;
 
+    final db = ref.read(habitsDatabaseProvider);
+    final prefs = await SharedPreferences.getInstance();
+
     if (newUid == null) {
-      // Signed out — sync stays off. Local data continues to work as guest.
+      // Signed out. Wipe local data and clear the last-uid marker so the
+      // next sign-in (whoever it is) starts clean. The cloud copy remains
+      // intact — the user can sign back in on this or any other device to
+      // restore their data.
+      if (wasSignedIn) {
+        await db.wipeAllLocalData();
+        await prefs.remove(kLastSignedInUidKey);
+      }
       return;
     }
 
@@ -44,13 +56,11 @@ class SyncController extends _$SyncController {
     // local data so user B doesn't inherit user A's local rows. Guest data
     // (no previous uid recorded) is preserved on first sign-in so it can
     // migrate to the new account.
-    final prefs = await SharedPreferences.getInstance();
-    final previousUid = prefs.getString(_kLastSignedInUidKey);
-    final db = ref.read(habitsDatabaseProvider);
+    final previousUid = prefs.getString(kLastSignedInUidKey);
     if (previousUid != null && previousUid != newUid) {
       await db.wipeAllLocalData();
     }
-    await prefs.setString(_kLastSignedInUidKey, newUid);
+    await prefs.setString(kLastSignedInUidKey, newUid);
 
     final service = SyncService(database: db, uid: newUid);
     _service = service;

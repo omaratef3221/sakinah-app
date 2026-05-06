@@ -5,7 +5,7 @@ import 'package:sakinah_flow/core/widgets/glass_card.dart';
 import 'package:sakinah_flow/features/auth/data/auth_repository.dart';
 import 'package:sakinah_flow/features/auth/presentation/screens/login_screen.dart';
 import 'package:sakinah_flow/features/auth/providers/auth_provider.dart';
-import 'package:sakinah_flow/features/sync/providers/sync_provider.dart';
+import 'package:sakinah_flow/features/sync/services/sync_service.dart';
 
 /// Account / sign-in card shown at the top of Settings.
 ///
@@ -151,8 +151,21 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
     if (!confirmed) return;
     setState(() => _busy = true);
     try {
-      // 1. Wipe Firestore data first while we still have auth.
-      await ref.read(syncControllerProvider.notifier).deleteAllRemoteData();
+      // 1. Wipe Firestore data first while we still have auth. We use
+      //    the static helper rather than the SyncController's instance
+      //    method so it works even when sync hasn't started (e.g. user
+      //    signed in offline, then asked to delete their account).
+      final uid = ref.read(authRepositoryProvider).currentUser?.uid;
+      if (uid != null) {
+        try {
+          await SyncService.deleteAllRemoteDataFor(uid: uid);
+        } catch (_) {
+          // Best-effort — proceed to auth deletion even if remote wipe
+          // fails (offline). Apple's guideline is satisfied by the auth
+          // deletion; orphan data will be cleaned up by Firestore TTL or
+          // a manual sweep.
+        }
+      }
 
       // 2. Try to delete the auth account. May require recent login.
       try {
