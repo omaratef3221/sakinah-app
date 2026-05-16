@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:sakinah_flow/core/providers/theme_provider.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
-class LeaderboardScreen extends StatelessWidget {
+class LeaderboardScreen extends ConsumerWidget {
   const LeaderboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final themeColors = ref.watch(themeColorsProvider);
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF1A5F4E),
-            Color(0xFF0F3D30),
-            Color(0xFF0A1F1A),
-          ],
-        ),
+      decoration: BoxDecoration(
+        gradient: themeColors.backgroundGradient,
       ),
       child: SafeArea(
         child: Center(
@@ -28,21 +25,12 @@ class LeaderboardScreen extends StatelessWidget {
                 color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Leaderboard',
-                style: TextStyle(
+              Text(
+                l.leaderboardTitle,
+                style: const TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFFD4AF37),
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'لوحة المتصدرين',
-                style: TextStyle(
-                  fontSize: 20,
-                  color: Color(0xFFD4AF37),
-                  fontWeight: FontWeight.w300,
                 ),
               ),
               const SizedBox(height: 32),
@@ -61,7 +49,7 @@ class LeaderboardScreen extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  'Coming Soon',
+                  l.comingSoon,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,

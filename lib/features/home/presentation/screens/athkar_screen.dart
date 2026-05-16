@@ -1,22 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:sakinah_flow/core/providers/theme_provider.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
-class AthkarScreen extends StatelessWidget {
+class AthkarScreen extends ConsumerWidget {
   const AthkarScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final themeColors = ref.watch(themeColorsProvider);
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1A5F4E),
-              Color(0xFF0F3D30),
-              Color(0xFF0A1F1A),
-            ],
-          ),
+        decoration: BoxDecoration(
+          gradient: themeColors.backgroundGradient,
         ),
         child: SafeArea(
           child: Column(
@@ -40,25 +37,13 @@ class AthkarScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Athkar',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFD4AF37),
-                          ),
-                        ),
-                        Text(
-                          'الأذكار',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFFD4AF37),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      l.athkarTitle,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFD4AF37),
+                      ),
                     ),
                   ],
                 ),
@@ -88,7 +73,7 @@ class AthkarScreen extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          'Coming Soon',
+                          l.comingSoon,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,

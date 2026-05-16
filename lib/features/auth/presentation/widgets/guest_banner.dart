@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:sakinah_flow/features/auth/presentation/screens/login_screen.dart';
 import 'package:sakinah_flow/features/auth/providers/auth_provider.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
 /// Slim banner shown on the dashboard when the user is in guest mode,
 /// nudging them to sign in to back up their progress.
@@ -15,6 +16,7 @@ class GuestBanner extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authStateChangesProvider).valueOrNull;
     if (user != null) return const SizedBox.shrink();
+    final l = AppLocalizations.of(context);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -39,21 +41,21 @@ class GuestBanner extends ConsumerWidget {
             size: 22,
           ),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Save your progress',
-                  style: TextStyle(
+                  l.guestBannerTitle,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
                 ),
                 Text(
-                  'Sign in to back up across devices',
-                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                  l.guestBannerSubtitle,
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
                 ),
               ],
             ),
@@ -66,7 +68,7 @@ class GuestBanner extends ConsumerWidget {
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
               );
             },
-            child: const Text('Sign in'),
+            child: Text(l.guestBannerCta),
           ),
         ],
       ),

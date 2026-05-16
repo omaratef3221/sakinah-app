@@ -2,8 +2,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_qiblah/flutter_qiblah.dart';
+import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/core/widgets/glass_card.dart';
 import 'package:sakinah_flow/features/salah/services/adhan_service.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 import 'package:adhan/adhan.dart';
 import 'package:intl/intl.dart';
 
@@ -13,18 +15,12 @@ class PrayerScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prayerTimesAsync = ref.watch(prayerTimesNotifierProvider);
+    final l = AppLocalizations.of(context);
+    final themeColors = ref.watch(themeColorsProvider);
 
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF1A5F4E),
-            Color(0xFF0F3D30),
-            Color(0xFF0A1F1A),
-          ],
-        ),
+      decoration: BoxDecoration(
+        gradient: themeColors.backgroundGradient,
       ),
       child: SafeArea(
         child: prayerTimesAsync.when(
@@ -41,13 +37,13 @@ class PrayerScreen extends HookConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildHeader(),
+                        _buildHeader(context, l),
                         const SizedBox(height: 24),
-                        _buildNextPrayerHero(ref, prayerTimes, nextPrayer),
+                        _buildNextPrayerHero(context, ref, prayerTimes, nextPrayer, l),
                         const SizedBox(height: 24),
-                        _buildPrayerTimesGrid(prayerTimes, nextPrayer),
+                        _buildPrayerTimesGrid(context, prayerTimes, nextPrayer, l),
                         const SizedBox(height: 24),
-                        _buildQiblaCompass(prayerTimes),
+                        _buildQiblaCompass(context, prayerTimes, l),
                         const SizedBox(height: 80),
                       ],
                     ),
@@ -72,7 +68,7 @@ class PrayerScreen extends HookConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Unable to load prayer times',
+                  l.prayerErrorLoad,
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 16,
@@ -80,7 +76,7 @@ class PrayerScreen extends HookConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Please check your location settings',
+                  l.prayerErrorCheckSettings,
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.6),
                     fontSize: 14,
@@ -94,27 +90,19 @@ class PrayerScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context, AppLocalizations l) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Column(
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Prayer Times',
-              style: TextStyle(
+              l.prayerTitle,
+              style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFFD4AF37),
-              ),
-            ),
-            Text(
-              'مواقيت الصلاة',
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFFD4AF37),
-                fontWeight: FontWeight.w300,
               ),
             ),
           ],
@@ -163,7 +151,8 @@ class PrayerScreen extends HookConsumerWidget {
     }
   }
 
-  String _getTimeRemaining(WidgetRef ref, Prayer? nextPrayer) {
+  String _getTimeRemaining(
+      WidgetRef ref, Prayer? nextPrayer, AppLocalizations l) {
     if (nextPrayer == null || nextPrayer == Prayer.none) {
       return '--';
     }
@@ -176,13 +165,33 @@ class PrayerScreen extends HookConsumerWidget {
     final minutes = duration.inMinutes.remainder(60);
 
     if (hours > 0) {
-      return 'in ${hours}h ${minutes}m';
+      return l.prayerInHoursMinutes(hours, minutes);
     } else {
-      return 'in ${minutes}m';
+      return l.prayerInMinutes(minutes);
     }
   }
 
-  Widget _buildNextPrayerHero(WidgetRef ref, PrayerTimes? prayerTimes, Prayer? nextPrayer) {
+  String _prayerName(Prayer? p, AppLocalizations l) {
+    switch (p) {
+      case Prayer.fajr:
+        return l.prayerFajr;
+      case Prayer.sunrise:
+        return l.prayerSunrise;
+      case Prayer.dhuhr:
+        return l.prayerDhuhr;
+      case Prayer.asr:
+        return l.prayerAsr;
+      case Prayer.maghrib:
+        return l.prayerMaghrib;
+      case Prayer.isha:
+        return l.prayerIsha;
+      default:
+        return l.prayerLoading;
+    }
+  }
+
+  Widget _buildNextPrayerHero(BuildContext context, WidgetRef ref,
+      PrayerTimes? prayerTimes, Prayer? nextPrayer, AppLocalizations l) {
     // For Fajr after Isha, we need to calculate tomorrow's Fajr time
     DateTime? nextPrayerTime;
     if (nextPrayer == Prayer.fajr && prayerTimes?.nextPrayer() == Prayer.none) {
@@ -215,7 +224,7 @@ class PrayerScreen extends HookConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Next Prayer',
+                l.prayerNextPrayer,
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.white.withValues(alpha: 0.8),
@@ -229,7 +238,7 @@ class PrayerScreen extends HookConsumerWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  _getTimeRemaining(ref, nextPrayer),
+                  _getTimeRemaining(ref, nextPrayer, l),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -248,18 +257,11 @@ class PrayerScreen extends HookConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    nextPrayer?.englishName ?? 'Loading',
+                    _prayerName(nextPrayer, l),
                     style: const TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    nextPrayer?.arabicName ?? '',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -325,10 +327,11 @@ class PrayerScreen extends HookConsumerWidget {
     return _formatTime(iqamah);
   }
 
-  Widget _buildPrayerTimesGrid(PrayerTimes? prayerTimes, Prayer? nextPrayer) {
+  Widget _buildPrayerTimesGrid(BuildContext context, PrayerTimes? prayerTimes,
+      Prayer? nextPrayer, AppLocalizations l) {
     final prayers = [
       {
-        'name': 'Fajr',
+        'name': l.prayerFajr,
         'arabic': 'الفجر',
         'time': _formatTime(prayerTimes?.fajr),
         'period': _formatPeriod(prayerTimes?.fajr),
@@ -338,7 +341,7 @@ class PrayerScreen extends HookConsumerWidget {
         'prayer': Prayer.fajr,
       },
       {
-        'name': 'Sunrise',
+        'name': l.prayerSunrise,
         'arabic': 'الشروق',
         'time': _formatTime(prayerTimes?.sunrise),
         'period': _formatPeriod(prayerTimes?.sunrise),
@@ -348,7 +351,7 @@ class PrayerScreen extends HookConsumerWidget {
         'prayer': Prayer.sunrise,
       },
       {
-        'name': 'Dhuhr',
+        'name': l.prayerDhuhr,
         'arabic': 'الظهر',
         'time': _formatTime(prayerTimes?.dhuhr),
         'period': _formatPeriod(prayerTimes?.dhuhr),
@@ -358,7 +361,7 @@ class PrayerScreen extends HookConsumerWidget {
         'prayer': Prayer.dhuhr,
       },
       {
-        'name': 'Asr',
+        'name': l.prayerAsr,
         'arabic': 'العصر',
         'time': _formatTime(prayerTimes?.asr),
         'period': _formatPeriod(prayerTimes?.asr),
@@ -368,7 +371,7 @@ class PrayerScreen extends HookConsumerWidget {
         'prayer': Prayer.asr,
       },
       {
-        'name': 'Maghrib',
+        'name': l.prayerMaghrib,
         'arabic': 'المغرب',
         'time': _formatTime(prayerTimes?.maghrib),
         'period': _formatPeriod(prayerTimes?.maghrib),
@@ -378,7 +381,7 @@ class PrayerScreen extends HookConsumerWidget {
         'prayer': Prayer.maghrib,
       },
       {
-        'name': 'Isha',
+        'name': l.prayerIsha,
         'arabic': 'العشاء',
         'time': _formatTime(prayerTimes?.isha),
         'period': _formatPeriod(prayerTimes?.isha),
@@ -392,20 +395,12 @@ class PrayerScreen extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Today\'s Schedule',
-          style: TextStyle(
+        Text(
+          l.prayerSchedule,
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Color(0xFFD4AF37),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'جدول اليوم',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 16),
@@ -425,12 +420,13 @@ class PrayerScreen extends HookConsumerWidget {
             final isActive = prayerType == nextPrayer;
 
             return _buildPrayerGridCard(
+              context,
               prayer['name'] as String,
-              prayer['arabic'] as String,
               prayer['time'] as String,
               prayer['period'] as String,
               prayer['icon'] as IconData,
               prayer['color'] as Color,
+              l,
               isActive: isActive,
               iqamah: prayer['iqamah'] as String?,
             );
@@ -441,12 +437,13 @@ class PrayerScreen extends HookConsumerWidget {
   }
 
   Widget _buildPrayerGridCard(
+    BuildContext context,
     String name,
-    String arabicName,
     String time,
     String period,
     IconData icon,
-    Color color, {
+    Color color,
+    AppLocalizations l, {
     bool isActive = false,
     String? iqamah,
   }) {
@@ -487,9 +484,9 @@ class PrayerScreen extends HookConsumerWidget {
                     color: const Color(0xFFD4AF37),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text(
-                    'NEXT',
-                    style: TextStyle(
+                  child: Text(
+                    l.prayerNext,
+                    style: const TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF0A1F1A),
@@ -507,13 +504,6 @@ class PrayerScreen extends HookConsumerWidget {
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
-                ),
-              ),
-              Text(
-                arabicName,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: 4),
@@ -546,7 +536,7 @@ class PrayerScreen extends HookConsumerWidget {
               if (iqamah != null) ...[
                 const SizedBox(height: 2),
                 Text(
-                  'Iqamah: $iqamah',
+                  l.prayerIqamah(iqamah),
                   style: TextStyle(
                     fontSize: 11,
                     color: Colors.white.withValues(alpha: 0.5),
@@ -561,15 +551,15 @@ class PrayerScreen extends HookConsumerWidget {
     );
   }
 
-  String _getCardinalDirection(double degrees) {
-    if (degrees >= 337.5 || degrees < 22.5) return 'North';
-    if (degrees >= 22.5 && degrees < 67.5) return 'Northeast';
-    if (degrees >= 67.5 && degrees < 112.5) return 'East';
-    if (degrees >= 112.5 && degrees < 157.5) return 'Southeast';
-    if (degrees >= 157.5 && degrees < 202.5) return 'South';
-    if (degrees >= 202.5 && degrees < 247.5) return 'Southwest';
-    if (degrees >= 247.5 && degrees < 292.5) return 'West';
-    return 'Northwest';
+  String _getCardinalDirection(double degrees, AppLocalizations l) {
+    if (degrees >= 337.5 || degrees < 22.5) return l.compassNorth;
+    if (degrees >= 22.5 && degrees < 67.5) return l.compassNortheast;
+    if (degrees >= 67.5 && degrees < 112.5) return l.compassEast;
+    if (degrees >= 112.5 && degrees < 157.5) return l.compassSoutheast;
+    if (degrees >= 157.5 && degrees < 202.5) return l.compassSouth;
+    if (degrees >= 202.5 && degrees < 247.5) return l.compassSouthwest;
+    if (degrees >= 247.5 && degrees < 292.5) return l.compassWest;
+    return l.compassNorthwest;
   }
 
   // Calculate accurate Qibla direction using the great circle formula
@@ -601,7 +591,8 @@ class PrayerScreen extends HookConsumerWidget {
     return qibla;
   }
 
-  Widget _buildQiblaCompass(PrayerTimes? prayerTimes) {
+  Widget _buildQiblaCompass(
+      BuildContext context, PrayerTimes? prayerTimes, AppLocalizations l) {
     // Calculate Qibla direction from current location using accurate great circle formula
     double calculatedQiblaDirection = 0;
     if (prayerTimes != null) {
@@ -623,7 +614,7 @@ class PrayerScreen extends HookConsumerWidget {
           deviceHeading = snapshot.data!.direction;
         }
 
-        final cardinalDirection = _getCardinalDirection(qiblaDirection);
+        final cardinalDirection = _getCardinalDirection(qiblaDirection, l);
 
         // Calculate the angle to rotate: Qibla direction minus device heading
         // This makes the needle point to Qibla regardless of phone orientation
@@ -642,23 +633,15 @@ class PrayerScreen extends HookConsumerWidget {
                     size: 24,
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Qibla Direction',
-                    style: TextStyle(
+                  Text(
+                    l.prayerQibla,
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFFD4AF37),
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'اتجاه القبلة',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.white.withValues(alpha: 0.7),
-                ),
               ),
               const SizedBox(height: 20),
               // Instruction text
@@ -682,7 +665,7 @@ class PrayerScreen extends HookConsumerWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Point your phone toward the Kaaba icon',
+                      l.prayerQiblaPoint,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.white.withValues(alpha: 0.8),
@@ -788,9 +771,9 @@ class PrayerScreen extends HookConsumerWidget {
                               color: const Color(0xFFD4AF37),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Text(
-                              'QIBLA',
-                              style: TextStyle(
+                            child: Text(
+                              l.prayerQiblaLabel,
+                              style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF0A1F1A),
@@ -858,7 +841,7 @@ class PrayerScreen extends HookConsumerWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'toward Makkah Al-Mukarramah',
+                      l.prayerTowardMakkah,
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.white.withValues(alpha: 0.75),
@@ -885,12 +868,12 @@ class PrayerScreen extends HookConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Text(
-                                  'Calibrating Compass',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                Text(
+                                  l.prayerCalibrateTitle,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
                                 Text(
-                                  'Move your phone in a figure-8 pattern',
+                                  l.prayerCalibrateBody,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.white.withValues(alpha: 0.9),
@@ -934,20 +917,12 @@ class PrayerScreen extends HookConsumerWidget {
                         size: 20,
                       ),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Calibrate Compass',
-                        style: TextStyle(
+                      Text(
+                        l.prayerCalibrateButton,
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'إعادة معايرة البوصلة',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                     ],

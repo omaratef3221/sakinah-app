@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:sakinah_flow/core/providers/locale_provider.dart';
 import 'package:sakinah_flow/core/widgets/glass_card.dart';
 import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/features/auth/presentation/widgets/account_section.dart';
 import 'package:sakinah_flow/features/notifications/services/notification_service.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -102,25 +104,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Settings',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFD4AF37),
-                          ),
-                        ),
-                        Text(
-                          'الإعدادات',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFFD4AF37),
-                          ),
-                        ),
-                      ],
+                    // Header: show only the localized title. Users can
+                    // switch to Arabic via Settings → Language; the legacy
+                    // bilingual stacking is gone.
+                    Text(
+                      AppLocalizations.of(context).settingsTitle,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFD4AF37),
+                      ),
                     ),
                   ],
                 ),
@@ -129,9 +122,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   children: [
-                    const Text(
-                      'Account',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context).settingsSectionAccount,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFFD4AF37),
@@ -140,9 +133,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const SizedBox(height: 12),
                     const AccountSection(),
                     const SizedBox(height: 24),
-                    const Text(
-                      'Notifications',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context).settingsSectionNotifications,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFFD4AF37),
@@ -151,8 +144,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const SizedBox(height: 12),
                     _buildSettingCard(
                       icon: Icons.notifications_rounded,
-                      title: 'Enable Notifications',
-                      arabicTitle: 'تفعيل الإشعارات',
+                      title: AppLocalizations.of(context).settingsEnableNotifications,
                       value: _notificationsEnabled,
                       onChanged: (value) async {
                         if (value) {
@@ -163,8 +155,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           if (!granted) {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Notification permission denied'),
+                                SnackBar(
+                                  content: Text(AppLocalizations.of(context)
+                                      .settingsPermissionDenied),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -180,8 +173,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const SizedBox(height: 12),
                     _buildSettingCard(
                       icon: Icons.mosque_rounded,
-                      title: 'Prayer Reminders',
-                      arabicTitle: 'تذكير الصلاة',
+                      title: AppLocalizations.of(context).settingsPrayerReminders,
                       value: _prayerReminders,
                       onChanged: (value) {
                         setState(() {
@@ -197,8 +189,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const SizedBox(height: 12),
                     _buildSettingCard(
                       icon: Icons.check_circle_rounded,
-                      title: 'Habit Reminders',
-                      arabicTitle: 'تذكير العادات',
+                      title: AppLocalizations.of(context).settingsHabitReminders,
                       value: _habitReminders,
                       onChanged: (value) {
                         setState(() {
@@ -208,9 +199,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       },
                     ),
                     const SizedBox(height: 24),
-                    const Text(
-                      'Appearance',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context).settingsSectionAppearance,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFFD4AF37),
@@ -219,9 +210,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const SizedBox(height: 12),
                     _buildThemeSelector(),
                     const SizedBox(height: 24),
-                    const Text(
-                      'About',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context).settingsLanguage,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFD4AF37),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildLanguageSelector(),
+                    const SizedBox(height: 24),
+                    Text(
+                      AppLocalizations.of(context).settingsSectionAbout,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFFD4AF37),
@@ -230,15 +232,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const SizedBox(height: 12),
                     _buildInfoCard(
                       icon: Icons.info_rounded,
-                      title: 'Version',
-                      arabicTitle: 'الإصدار',
+                      title: AppLocalizations.of(context).settingsVersion,
                       value: '1.0.0',
                     ),
                     const SizedBox(height: 12),
                     _buildInfoCard(
                       icon: Icons.privacy_tip_rounded,
-                      title: 'Privacy Policy',
-                      arabicTitle: 'سياسة الخصوصية',
+                      title: AppLocalizations.of(context).settingsPrivacyPolicy,
                       value: '',
                       onTap: _openPrivacyPolicy,
                     ),
@@ -248,6 +248,207 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // Map the stored theme-prefs string (always English internal id) to the
+  // user-facing label in the active locale.
+  String _localizedThemeName(BuildContext context, String themeId) {
+    final l = AppLocalizations.of(context);
+    switch (themeId) {
+      case 'Green (Default)':
+        return l.themeGreen;
+      case 'Blue Ocean':
+        return l.themeBlue;
+      case 'Desert Gold':
+        return l.themeGold;
+      case 'Night Purple':
+        return l.themePurple;
+      default:
+        return themeId;
+    }
+  }
+
+  Widget _buildLanguageSelector() {
+    final lang = ref.watch(appLanguageProvider);
+    final l = AppLocalizations.of(context);
+    final displayValue = switch (lang) {
+      AppLanguage.english => l.settingsLanguageEnglish,
+      AppLanguage.arabic => l.settingsLanguageArabic,
+      AppLanguage.system => l.settingsLanguageSystem,
+    };
+
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: InkWell(
+        onTap: _showLanguageDialog,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.language_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l.settingsLanguage,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      l.settingsLanguageSubtitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      displayValue,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF3B82F6),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFF3B82F6),
+                size: 24,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showLanguageDialog() async {
+    final l = AppLocalizations.of(context);
+    final current = ref.read(appLanguageProvider);
+    final picked = await showDialog<AppLanguage>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: const Color(0xFF0F3D30),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          l.settingsLanguageDialogTitle,
+          style: const TextStyle(color: Color(0xFFD4AF37)),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.settingsLanguageDialogBody,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            _languageOption(
+              dialogCtx,
+              label: l.settingsLanguageSystem,
+              value: AppLanguage.system,
+              current: current,
+            ),
+            _languageOption(
+              dialogCtx,
+              label: l.settingsLanguageEnglish,
+              value: AppLanguage.english,
+              current: current,
+            ),
+            _languageOption(
+              dialogCtx,
+              // The Arabic option always shows its native name regardless
+              // of current language — easier to find for non-Arabic users.
+              label: l.settingsLanguageArabic,
+              value: AppLanguage.arabic,
+              current: current,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: Text(l.commonCancel),
+          ),
+        ],
+      ),
+    );
+    if (picked != null && picked != current) {
+      await ref.read(appLanguageProvider.notifier).set(picked);
+    }
+  }
+
+  Widget _languageOption(
+    BuildContext dialogCtx, {
+    required String label,
+    required AppLanguage value,
+    required AppLanguage current,
+  }) {
+    final isSelected = value == current;
+    return InkWell(
+      onTap: () => Navigator.of(dialogCtx).pop(value),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        margin: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFFD4AF37).withValues(alpha: 0.15)
+              : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFFD4AF37)
+                : Colors.white.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight:
+                      isSelected ? FontWeight.bold : FontWeight.w500,
+                ),
+              ),
+            ),
+            if (isSelected)
+              const Icon(
+                Icons.check_rounded,
+                color: Color(0xFFD4AF37),
+                size: 20,
+              ),
+          ],
         ),
       ),
     );
@@ -282,24 +483,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'App Theme',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context).settingsAppTheme,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
-                    const Text(
-                      'مظهر التطبيق',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
-                    ),
                     const SizedBox(height: 4),
                     Text(
-                      _selectedTheme,
+                      _localizedThemeName(context, _selectedTheme),
                       style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFFD4AF37),
@@ -350,19 +544,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Adhan Sound',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context).settingsAdhanSound,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
-                      ),
-                    ),
-                    const Text(
-                      'صوت الأذان',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -392,7 +579,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildSettingCard({
     required IconData icon,
     required String title,
-    required String arabicTitle,
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
@@ -416,25 +602,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(width: 16),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  arabicTitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
           Switch(
@@ -453,7 +627,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildInfoCard({
     required IconData icon,
     required String title,
-    required String arabicTitle,
     required String value,
     VoidCallback? onTap,
   }) {
@@ -479,25 +652,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    arabicTitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
             if (value.isNotEmpty)
@@ -527,8 +688,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open privacy policy'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).settingsPrivacyOpenError),
             backgroundColor: Colors.red,
           ),
         );
@@ -571,22 +732,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Select Adhan Sound',
-                          style: TextStyle(
+                          AppLocalizations.of(context).settingsAdhanSelectTitle,
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF10B981),
-                          ),
-                        ),
-                        Text(
-                          'اختر صوت الأذان',
-                          style: TextStyle(
-                            fontSize: 12,
                             color: Color(0xFF10B981),
                           ),
                         ),
@@ -601,7 +755,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Tap to select, press play to preview',
+                      AppLocalizations.of(context).settingsAdhanSelectHint,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.white.withValues(alpha: 0.7),
@@ -687,7 +841,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                       ),
                                       if (isPlaying)
                                         Text(
-                                          'Playing...',
+                                          AppLocalizations.of(context).settingsAdhanPlaying,
                                           style: TextStyle(
                                             fontSize: 11,
                                             color: Colors.white.withValues(alpha: 0.7),
@@ -721,7 +875,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     }
                   },
                   child: Text(
-                    'Cancel',
+                    AppLocalizations.of(context).commonCancel,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.6),
                       fontSize: 15,
@@ -747,9 +901,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Save',
-                    style: TextStyle(
+                  child: Text(
+                    AppLocalizations.of(context).commonSave,
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -804,22 +958,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Select App Theme',
-                          style: TextStyle(
+                          AppLocalizations.of(context).settingsThemeSelectTitle,
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFD4AF37),
-                          ),
-                        ),
-                        Text(
-                          'اختر مظهر التطبيق',
-                          style: TextStyle(
-                            fontSize: 12,
                             color: Color(0xFFD4AF37),
                           ),
                         ),
@@ -834,7 +981,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Choose a theme for your app',
+                      AppLocalizations.of(context).settingsThemeSelectHint,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.white.withValues(alpha: 0.7),
@@ -888,7 +1035,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Text(
-                                    theme,
+                                    _localizedThemeName(context, theme),
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
@@ -917,7 +1064,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     Navigator.of(context).pop();
                   },
                   child: Text(
-                    'Cancel',
+                    AppLocalizations.of(context).commonCancel,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.6),
                       fontSize: 15,
@@ -942,9 +1089,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Apply',
-                    style: TextStyle(
+                  child: Text(
+                    AppLocalizations.of(context).commonApply,
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),

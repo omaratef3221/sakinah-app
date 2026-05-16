@@ -1,13 +1,15 @@
 name: sakinah_flow
 description: "A high-end AI-powered Islamic Habit Tracker"
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
 
   # State Management
@@ -68,6 +70,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true  # enable l10n codegen from .arb files (see l10n.yaml)
 
   # Assets
   assets:

@@ -5,6 +5,7 @@ import 'package:sakinah_flow/features/auth/data/auth_repository.dart';
 import 'package:sakinah_flow/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:sakinah_flow/features/auth/presentation/widgets/social_sign_in_buttons.dart';
 import 'package:sakinah_flow/features/auth/providers/auth_provider.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -42,6 +43,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             displayName: _nameController.text.trim(),
           );
       if (!mounted) return;
+      final l = AppLocalizations.of(context);
       // Capture the root messenger BEFORE popping — otherwise the snackbar
       // attaches to this screen's messenger and is dismissed instantly.
       final rootMessenger = ScaffoldMessenger.maybeOf(
@@ -50,16 +52,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ScaffoldMessenger.of(context);
       Navigator.of(context).popUntil((route) => route.isFirst);
       rootMessenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Account created. Check your email for a verification link.'),
-          backgroundColor: Color(0xFF10B981),
+        SnackBar(
+          content: Text(l.signupSuccess),
+          backgroundColor: const Color(0xFF10B981),
         ),
       );
     } on AuthFailure catch (e) {
       _showError(e.message);
     } catch (e) {
-      _showError('Sign up failed: $e');
+      if (mounted) _showError(AppLocalizations.of(context).signupErrorGeneric);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -78,6 +79,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
+    final l = AppLocalizations.of(context);
 
     // Pop back to first route when sign-in succeeds (covers Apple/Google
     // social sign-in from this screen too).
@@ -105,9 +107,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 8),
-                  const Text(
-                    'Create Account',
-                    style: TextStyle(
+                  Text(
+                    l.signupTitle,
+                    style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
@@ -115,7 +117,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Save your habits, streaks, and progress to the cloud',
+                    l.signupSubtitle,
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.white.withValues(alpha: 0.7),
@@ -124,27 +126,28 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   const SizedBox(height: 28),
                   AuthTextField(
                     controller: _nameController,
-                    label: 'Name',
-                    hint: 'Your name',
+                    label: l.signupNameLabel,
+                    hint: l.signupNameHint,
                     icon: Icons.person_rounded,
                     keyboardType: TextInputType.name,
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Enter your name' : null,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? l.signupNameError
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   AuthTextField(
                     controller: _emailController,
-                    label: 'Email',
-                    hint: 'you@example.com',
+                    label: l.loginEmailLabel,
+                    hint: l.loginEmailHint,
                     icon: Icons.email_rounded,
                     keyboardType: TextInputType.emailAddress,
-                    validator: _validateEmail,
+                    validator: (v) => _validateEmail(v, l),
                   ),
                   const SizedBox(height: 16),
                   AuthTextField(
                     controller: _passwordController,
-                    label: 'Password',
-                    hint: 'At least 6 characters',
+                    label: l.loginPasswordLabel,
+                    hint: l.signupPasswordHint,
                     icon: Icons.lock_rounded,
                     obscure: _obscurePassword,
                     suffixIcon: _obscurePassword
@@ -153,16 +156,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     onSuffixTap: () => setState(
                         () => _obscurePassword = !_obscurePassword),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Enter a password';
-                      if (v.length < 6) return 'At least 6 characters';
+                      if (v == null || v.isEmpty) {
+                        return l.signupPasswordEmptyError;
+                      }
+                      if (v.length < 6) return l.signupPasswordShortError;
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
                   AuthTextField(
                     controller: _confirmController,
-                    label: 'Confirm password',
-                    hint: 'Re-enter your password',
+                    label: l.signupConfirmPasswordLabel,
+                    hint: l.signupConfirmPasswordHint,
                     icon: Icons.lock_outline_rounded,
                     obscure: _obscureConfirm,
                     textInputAction: TextInputAction.done,
@@ -173,9 +178,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     onSuffixTap: () =>
                         setState(() => _obscureConfirm = !_obscureConfirm),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Confirm your password';
+                      if (v == null || v.isEmpty) {
+                        return l.signupConfirmEmptyError;
+                      }
                       if (v != _passwordController.text) {
-                        return 'Passwords do not match';
+                        return l.signupConfirmMismatchError;
                       }
                       return null;
                     },
@@ -192,7 +199,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                               child:
                                   CircularProgressIndicator(strokeWidth: 2.5),
                             )
-                          : const Text('Create Account'),
+                          : Text(l.signupButton),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -206,7 +213,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
-                          'or',
+                          l.commonOr,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.6),
                           ),
@@ -232,10 +239,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 }
 
-String? _validateEmail(String? value) {
-  if (value == null || value.trim().isEmpty) return 'Enter your email';
+String? _validateEmail(String? value, AppLocalizations l) {
+  if (value == null || value.trim().isEmpty) return l.loginErrorEnterEmail;
   final email = value.trim();
   final regex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-  if (!regex.hasMatch(email)) return 'Enter a valid email address';
+  if (!regex.hasMatch(email)) return l.loginErrorInvalidEmail;
   return null;
 }

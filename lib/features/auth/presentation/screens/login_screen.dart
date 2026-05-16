@@ -7,6 +7,7 @@ import 'package:sakinah_flow/features/auth/presentation/screens/signup_screen.da
 import 'package:sakinah_flow/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:sakinah_flow/features/auth/presentation/widgets/social_sign_in_buttons.dart';
 import 'package:sakinah_flow/features/auth/providers/auth_provider.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -40,7 +41,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } on AuthFailure catch (e) {
       _showError(e.message);
     } catch (e) {
-      _showError('Sign in failed: $e');
+      if (mounted) _showError(AppLocalizations.of(context).loginErrorGeneric);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -76,6 +77,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
+    final l = AppLocalizations.of(context);
 
     // If this screen was pushed on top of MainNavigation (e.g. from the
     // guest banner) and the user signs in, pop it so they land back on
@@ -119,10 +121,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 28),
-                  const Center(
+                  Center(
                     child: Text(
-                      'Welcome Back',
-                      style: TextStyle(
+                      l.loginWelcome,
+                      style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -132,7 +134,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 8),
                   Center(
                     child: Text(
-                      'Sign in to back up your progress across devices',
+                      l.loginSubtitle,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
@@ -143,17 +145,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 32),
                   AuthTextField(
                     controller: _emailController,
-                    label: 'Email',
-                    hint: 'you@example.com',
+                    label: l.loginEmailLabel,
+                    hint: l.loginEmailHint,
                     icon: Icons.email_rounded,
                     keyboardType: TextInputType.emailAddress,
-                    validator: _validateEmail,
+                    validator: (v) => _validateEmail(v, l),
                   ),
                   const SizedBox(height: 16),
                   AuthTextField(
                     controller: _passwordController,
-                    label: 'Password',
-                    hint: 'Your password',
+                    label: l.loginPasswordLabel,
+                    hint: l.loginPasswordHint,
                     icon: Icons.lock_rounded,
                     obscure: _obscurePassword,
                     textInputAction: TextInputAction.done,
@@ -163,12 +165,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         : Icons.visibility_off_rounded,
                     onSuffixTap: () => setState(
                         () => _obscurePassword = !_obscurePassword),
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Enter your password' : null,
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? l.loginErrorEnterPassword
+                        : null,
                   ),
                   const SizedBox(height: 8),
                   Align(
-                    alignment: Alignment.centerRight,
+                    alignment: AlignmentDirectional.centerEnd,
                     child: TextButton(
                       onPressed: () {
                         Navigator.of(context).push(
@@ -177,7 +180,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         );
                       },
-                      child: const Text('Forgot password?'),
+                      child: Text(l.loginForgotPassword),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -193,7 +196,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 strokeWidth: 2.5,
                               ),
                             )
-                          : const Text('Sign In'),
+                          : Text(l.loginSignInButton),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -207,7 +210,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
-                          'or',
+                          l.commonOr,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.6),
                           ),
@@ -227,7 +230,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Don't have an account? ",
+                        l.loginNoAccount,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.7),
                         ),
@@ -240,14 +243,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           );
                         },
-                        child: const Text('Sign up'),
+                        child: Text(l.loginSignUpLink),
                       ),
                     ],
                   ),
                   TextButton(
                     onPressed: _continueAsGuest,
                     child: Text(
-                      'Continue as guest',
+                      l.loginContinueAsGuest,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.7),
                         decoration: TextDecoration.underline,
@@ -264,10 +267,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-String? _validateEmail(String? value) {
-  if (value == null || value.trim().isEmpty) return 'Enter your email';
+String? _validateEmail(String? value, AppLocalizations l) {
+  if (value == null || value.trim().isEmpty) return l.loginErrorEnterEmail;
   final email = value.trim();
   final regex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-  if (!regex.hasMatch(email)) return 'Enter a valid email address';
+  if (!regex.hasMatch(email)) return l.loginErrorInvalidEmail;
   return null;
 }

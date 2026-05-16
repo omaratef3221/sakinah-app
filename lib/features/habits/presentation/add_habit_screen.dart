@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/core/widgets/glass_card.dart';
 import 'package:sakinah_flow/core/shared_models/habit_category.dart';
 import 'package:sakinah_flow/features/habits/data/models/habit_data_model.dart';
 import 'package:sakinah_flow/features/habits/data/database/habits_database.dart';
 import 'package:sakinah_flow/features/habits/providers/habits_database_provider.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 import 'package:drift/drift.dart' as drift;
 
 class AddHabitScreen extends ConsumerStatefulWidget {
@@ -54,7 +56,8 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading habits: $e')),
+          SnackBar(
+              content: Text(AppLocalizations.of(context).addHabitErrorLoad)),
         );
       }
     }
@@ -103,9 +106,10 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
   }
 
   Future<void> _addSelectedHabits() async {
+    final l = AppLocalizations.of(context);
     if (_selectedHabitTitles.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one habit')),
+        SnackBar(content: Text(l.addHabitSelectAtLeastOne)),
       );
       return;
     }
@@ -126,9 +130,10 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
       }
 
       if (mounted) {
+        final count = _selectedHabitTitles.length;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Added ${_selectedHabitTitles.length} habit(s) successfully!'),
+            content: Text(AppLocalizations.of(context).addHabitSuccess(count)),
             backgroundColor: const Color(0xFF10B981),
           ),
         );
@@ -137,7 +142,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding habits: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context).addHabitErrorAdd)),
         );
       }
     }
@@ -145,18 +150,11 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = ref.watch(themeColorsProvider);
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1A5F4E),
-              Color(0xFF0F3D30),
-              Color(0xFF0A1F1A),
-            ],
-          ),
+        decoration: BoxDecoration(
+          gradient: themeColors.backgroundGradient,
         ),
         child: SafeArea(
           child: Column(
@@ -183,6 +181,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
   }
 
   Widget _buildHeader() {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Row(
@@ -202,26 +201,14 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
             ),
           ),
           const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Add Habits',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFD4AF37),
-                  ),
-                ),
-                Text(
-                  'إضافة العادات',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFFD4AF37),
-                  ),
-                ),
-              ],
+          Expanded(
+            child: Text(
+              l.addHabitTitle,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFD4AF37),
+              ),
             ),
           ),
           if (_selectedHabitTitles.isNotEmpty)
@@ -234,7 +221,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '${_selectedHabitTitles.length} selected',
+                l.addHabitSelectedCount(_selectedHabitTitles.length),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -271,7 +258,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
             fontSize: 16,
           ),
           decoration: InputDecoration(
-            hintText: 'Type a habit to search for',
+            hintText: AppLocalizations.of(context).habitsSearchHint,
             hintStyle: TextStyle(
               color: Colors.black.withValues(alpha: 0.4),
               fontSize: 14,
@@ -306,27 +293,22 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
   }
 
   Widget _buildCategoryFilter() {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          Expanded(
-            child: _buildFilterChip('All', 'الكل', 'all'),
-          ),
+          Expanded(child: _buildFilterChip(l.habitsFilterAll, 'all')),
           const SizedBox(width: 12),
-          Expanded(
-            child: _buildFilterChip('Fard', 'فرض', 'fard'),
-          ),
+          Expanded(child: _buildFilterChip(l.habitsFilterFard, 'fard')),
           const SizedBox(width: 12),
-          Expanded(
-            child: _buildFilterChip('Sunnah', 'سنة', 'sunnah'),
-          ),
+          Expanded(child: _buildFilterChip(l.habitsFilterSunnah, 'sunnah')),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip(String label, String arabicLabel, String value) {
+  Widget _buildFilterChip(String label, String value) {
     final isSelected = _selectedCategory == value;
 
     return GestureDetector(
@@ -348,26 +330,14 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
             width: 1.5,
           ),
         ),
-        child: Column(
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                color: isSelected ? const Color(0xFF0A1F1A) : Colors.white,
-              ),
-            ),
-            Text(
-              arabicLabel,
-              style: TextStyle(
-                fontSize: 12,
-                color: isSelected
-                    ? const Color(0xFF0A1F1A).withValues(alpha: 0.7)
-                    : Colors.white.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            color: isSelected ? const Color(0xFF0A1F1A) : Colors.white,
+          ),
         ),
       ),
     );
@@ -375,10 +345,10 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
 
   Widget _buildHabitsList() {
     if (_filteredHabits.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          'No habits found',
-          style: TextStyle(
+          AppLocalizations.of(context).addHabitEmpty,
+          style: const TextStyle(
             fontSize: 16,
             color: Colors.white70,
           ),
@@ -440,13 +410,6 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                             color: Colors.white,
                           ),
                         ),
-                        Text(
-                          habit.titleArabic,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white.withValues(alpha: 0.7),
-                          ),
-                        ),
                         const SizedBox(height: 4),
                         Text(
                           habit.description,
@@ -471,9 +434,9 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                         color: const Color(0xFF10B981),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Text(
-                        'Added',
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context).addHabitAdded,
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -552,7 +515,8 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
             ],
           ),
           child: Text(
-            'Add ${_selectedHabitTitles.length} Habit${_selectedHabitTitles.length > 1 ? 's' : ''}',
+            AppLocalizations.of(context)
+                .addHabitButton(_selectedHabitTitles.length),
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 18,

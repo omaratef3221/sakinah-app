@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/core/widgets/glass_card.dart';
 import 'package:sakinah_flow/core/shared_models/habit_category.dart';
 import 'package:sakinah_flow/features/habits/providers/habits_database_provider.dart';
 import 'package:sakinah_flow/features/habits/data/database/habits_database.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:hijri/hijri_calendar.dart';
 
@@ -16,18 +18,12 @@ class ProgressScreen extends HookConsumerWidget {
     final fardHabitsAsync = ref.watch(watchFardHabitsProvider);
     final sunnahHabitsAsync = ref.watch(watchSunnahHabitsProvider);
     final isHijri = useState(false); // Toggle between Gregorian and Hijri calendar
+    final l = AppLocalizations.of(context);
+    final themeColors = ref.watch(themeColorsProvider);
 
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF1A5F4E),
-            Color(0xFF0F3D30),
-            Color(0xFF0A1F1A),
-          ],
-        ),
+      decoration: BoxDecoration(
+        gradient: themeColors.backgroundGradient,
       ),
       child: SafeArea(
         child: CustomScrollView(
@@ -39,15 +35,15 @@ class ProgressScreen extends HookConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeader(),
+                    _buildHeader(context, l),
                     const SizedBox(height: 24),
-                    _buildWeeklyProgress(),
+                    _buildWeeklyProgress(fardHabitsAsync, sunnahHabitsAsync, l),
                     const SizedBox(height: 24),
-                    _buildStreaksSection(fardHabitsAsync, sunnahHabitsAsync),
+                    _buildStreaksSection(fardHabitsAsync, sunnahHabitsAsync, l),
                     const SizedBox(height: 24),
-                    _buildStatistics(fardHabitsAsync, sunnahHabitsAsync),
+                    _buildStatistics(fardHabitsAsync, sunnahHabitsAsync, l),
                     const SizedBox(height: 24),
-                    _buildMonthlyCalendar(isHijri),
+                    _buildMonthlyCalendar(context, isHijri, l),
                     const SizedBox(height: 80),
                   ],
                 ),
@@ -59,27 +55,19 @@ class ProgressScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context, AppLocalizations l) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Column(
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Progress',
-              style: TextStyle(
+              l.progressTitle,
+              style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFFD4AF37),
-              ),
-            ),
-            Text(
-              'التقدم',
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFFD4AF37),
-                fontWeight: FontWeight.w300,
               ),
             ),
           ],
@@ -109,101 +97,187 @@ class ProgressScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildWeeklyProgress() {
-    final weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final completionRates = [85, 90, 75, 95, 80, 70, 60];
-
+  Widget _buildWeeklyProgress(
+    AsyncValue<List<dynamic>> fardHabitsAsync,
+    AsyncValue<List<dynamic>> sunnahHabitsAsync,
+    AppLocalizations l,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'This Week',
-          style: TextStyle(
+        Text(
+          l.progressThisWeek,
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Color(0xFFD4AF37),
           ),
         ),
         const SizedBox(height: 12),
-        GlassCard(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(7, (index) {
-                  final rate = completionRates[index];
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Column(
-                        children: [
-                          Text(
-                            weekDays[index],
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.white.withValues(alpha: 0.7),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            height: 100,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Stack(
-                              alignment: Alignment.bottomCenter,
-                              children: [
-                                Container(
-                                  height: rate.toDouble(),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.bottomCenter,
-                                      end: Alignment.topCenter,
-                                      colors: [
-                                        const Color(0xFFD4AF37),
-                                        const Color(0xFFB8941C),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '$rate%',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFD4AF37),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+        Consumer(
+          builder: (context, ref, _) {
+            final database = ref.watch(habitsDatabaseProvider);
+            return fardHabitsAsync.when(
+              data: (fardHabits) => sunnahHabitsAsync.when(
+                data: (sunnahHabits) {
+                  final allHabits = [...fardHabits, ...sunnahHabits];
+                  return FutureBuilder<List<_DayProgress>>(
+                    future: _computeWeeklyProgress(database, allHabits),
+                    builder: (context, snapshot) {
+                      final days = snapshot.data ?? _emptyWeek();
+                      return _buildWeeklyBars(days);
+                    },
                   );
-                }),
+                },
+                loading: () => _buildWeeklyBars(_emptyWeek()),
+                error: (_, __) => _buildWeeklyBars(_emptyWeek()),
               ),
-            ],
-          ),
+              loading: () => _buildWeeklyBars(_emptyWeek()),
+              error: (_, __) => _buildWeeklyBars(_emptyWeek()),
+            );
+          },
         ),
       ],
     );
   }
 
+  // Build the row of 7 day-bars from real per-day completion data.
+  Widget _buildWeeklyBars(List<_DayProgress> days) {
+    return GlassCard(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(7, (index) {
+          final d = days[index];
+          // 0 height bar when no completions — keeps it honest for brand-new
+          // accounts (no fake numbers).
+          final barHeight = (d.rate / 100.0) * 100.0;
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Column(
+                children: [
+                  Text(
+                    d.label,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.bottomCenter,
+                      children: [
+                        if (barHeight > 0)
+                          Container(
+                            height: barHeight,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                                colors: [
+                                  Color(0xFFD4AF37),
+                                  Color(0xFFB8941C),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    d.totalHabits == 0 ? '—' : '${d.rate}%',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: d.totalHabits == 0
+                          ? Colors.white.withValues(alpha: 0.4)
+                          : const Color(0xFFD4AF37),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  // Pre-fill with zeros so the loading state and empty state both show
+  // honest empty bars (not fake numbers).
+  List<_DayProgress> _emptyWeek() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return List.generate(7, (i) {
+      // Last 7 days ending today, oldest first.
+      final date = today.subtract(Duration(days: 6 - i));
+      return _DayProgress(
+        date: date,
+        label: labels[date.weekday % 7],
+        rate: 0,
+        completedCount: 0,
+        totalHabits: 0,
+      );
+    });
+  }
+
+  Future<List<_DayProgress>> _computeWeeklyProgress(
+    HabitsDatabase database,
+    List<dynamic> allHabits,
+  ) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    final result = <_DayProgress>[];
+    for (var i = 6; i >= 0; i--) {
+      final date = today.subtract(Duration(days: i));
+      // Only count habits that existed on (or before) this date — we don't
+      // want a habit created today to drag down yesterday's percentage.
+      final habitsExistingOnDate = allHabits.where((h) {
+        final created = (h.createdAt as DateTime);
+        final createdDay =
+            DateTime(created.year, created.month, created.day);
+        return !createdDay.isAfter(date);
+      }).toList();
+      var done = 0;
+      for (final habit in habitsExistingOnDate) {
+        final isDone = await database.isCompletedOnDate(habit.id, date);
+        if (isDone) done++;
+      }
+      final total = habitsExistingOnDate.length;
+      final rate = total == 0 ? 0 : (done / total * 100).round();
+      result.add(_DayProgress(
+        date: date,
+        label: labels[date.weekday % 7],
+        rate: rate,
+        completedCount: done,
+        totalHabits: total,
+      ));
+    }
+    return result;
+  }
+
   Widget _buildStreaksSection(
     AsyncValue<List<dynamic>> fardHabitsAsync,
     AsyncValue<List<dynamic>> sunnahHabitsAsync,
+    AppLocalizations l,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Active Streaks',
-          style: TextStyle(
+        Text(
+          l.progressActiveStreaks,
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Color(0xFFD4AF37),
@@ -224,7 +298,7 @@ class ProgressScreen extends HookConsumerWidget {
                   padding: const EdgeInsets.all(20),
                   child: Center(
                     child: Text(
-                      'No active streaks yet. Start building your habits!',
+                      l.progressNoStreaks,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
@@ -239,7 +313,9 @@ class ProgressScreen extends HookConsumerWidget {
                 children: habitsWithStreaks.take(5).map((habit) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: _buildStreakCard(habit),
+                    child: Builder(
+                      builder: (ctx) => _buildStreakCard(ctx, habit, l),
+                    ),
                   );
                 }).toList(),
               );
@@ -254,7 +330,8 @@ class ProgressScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildStreakCard(dynamic habit) {
+  Widget _buildStreakCard(
+      BuildContext context, dynamic habit, AppLocalizations l) {
     final isFard = habit.category == HabitCategory.fard;
     return GlassCard(
       padding: const EdgeInsets.all(16),
@@ -290,7 +367,7 @@ class ProgressScreen extends HookConsumerWidget {
                   ),
                 ),
                 Text(
-                  isFard ? 'Fard • فرض' : 'Sunnah • سنة',
+                  isFard ? l.habitsCategoryFard : l.habitsCategorySunnah,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.7),
@@ -325,13 +402,14 @@ class ProgressScreen extends HookConsumerWidget {
   Widget _buildStatistics(
     AsyncValue<List<dynamic>> fardHabitsAsync,
     AsyncValue<List<dynamic>> sunnahHabitsAsync,
+    AppLocalizations l,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Statistics',
-          style: TextStyle(
+        Text(
+          l.progressStatistics,
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Color(0xFFD4AF37),
@@ -355,7 +433,7 @@ class ProgressScreen extends HookConsumerWidget {
                     children: [
                       Expanded(
                         child: _buildStatCard(
-                          'Total Habits',
+                          l.progressTotalHabits,
                           totalHabits.toString(),
                           Icons.format_list_bulleted_rounded,
                           const Color(0xFF3B82F6),
@@ -364,7 +442,7 @@ class ProgressScreen extends HookConsumerWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildStatCard(
-                          'Total Days',
+                          l.progressTotalDays,
                           totalStreaks.toString(),
                           Icons.calendar_today_rounded,
                           const Color(0xFF10B981),
@@ -377,8 +455,8 @@ class ProgressScreen extends HookConsumerWidget {
                     children: [
                       Expanded(
                         child: _buildStatCard(
-                          'Current Streak',
-                          '$longestStreak days',
+                          l.progressCurrentStreak,
+                          l.progressDays(longestStreak),
                           Icons.local_fire_department_rounded,
                           const Color(0xFFF97316),
                         ),
@@ -386,8 +464,8 @@ class ProgressScreen extends HookConsumerWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildStatCard(
-                          'Best Streak',
-                          '$bestEverStreak days',
+                          l.progressBestStreak,
+                          l.progressDays(bestEverStreak),
                           Icons.emoji_events_rounded,
                           const Color(0xFFD4AF37),
                         ),
@@ -435,9 +513,11 @@ class ProgressScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildMonthlyCalendar(ValueNotifier<bool> isHijri) {
+  Widget _buildMonthlyCalendar(
+      BuildContext context, ValueNotifier<bool> isHijri, AppLocalizations l) {
     final now = DateTime.now();
     final hijriNow = HijriCalendar.now();
+    final localeStr = Localizations.localeOf(context).toString();
 
     // Calendar data based on type
     String currentMonth;
@@ -460,8 +540,8 @@ class ProgressScreen extends HookConsumerWidget {
       firstWeekday = (firstDayHijri.wkDay ?? 0) % 7;
       today = DateTime(now.year, now.month, now.day);
     } else {
-      // Gregorian calendar
-      currentMonth = DateFormat('MMMM yyyy').format(now);
+      // Gregorian calendar — localized month/year format
+      currentMonth = DateFormat('MMMM yyyy', localeStr).format(now);
       final firstDayOfMonth = DateTime(now.year, now.month, 1);
       final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
       daysInMonth = lastDayOfMonth.day;
@@ -489,7 +569,7 @@ class ProgressScreen extends HookConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Monthly Activity',
+                    l.progressMonthlyActivity,
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.white.withValues(alpha: 0.7),
@@ -512,15 +592,15 @@ class ProgressScreen extends HookConsumerWidget {
               child: Row(
                 children: [
                   _buildCalendarToggleButton(
-                    'Gregorian',
-                    'ميلادي',
+                    context,
+                    l.progressCalGregorian,
                     !isHijri.value,
                     () => isHijri.value = false,
                   ),
                   const SizedBox(width: 4),
                   _buildCalendarToggleButton(
-                    'Hijri',
-                    'هجري',
+                    context,
+                    l.progressCalHijri,
                     isHijri.value,
                     () => isHijri.value = true,
                   ),
@@ -592,7 +672,7 @@ class ProgressScreen extends HookConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Keep your streak alive! Every day counts 🌟',
+                      l.progressKeepStreak,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 11,
@@ -847,8 +927,8 @@ class ProgressScreen extends HookConsumerWidget {
   }
 
   Widget _buildCalendarToggleButton(
+    BuildContext context,
     String label,
-    String arabicLabel,
     bool isActive,
     VoidCallback onTap,
   ) {
@@ -865,30 +945,31 @@ class ProgressScreen extends HookConsumerWidget {
           color: isActive ? null : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                color: isActive ? const Color(0xFF0A1F1A) : const Color(0xFFD4AF37),
-              ),
-            ),
-            Text(
-              arabicLabel,
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                color: isActive
-                    ? const Color(0xFF0A1F1A).withValues(alpha: 0.8)
-                    : const Color(0xFFD4AF37).withValues(alpha: 0.7),
-              ),
-            ),
-          ],
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+            color: isActive ? const Color(0xFF0A1F1A) : const Color(0xFFD4AF37),
+          ),
         ),
       ),
     );
   }
+}
+
+/// Single day's habit-completion summary used by the weekly bars.
+class _DayProgress {
+  final DateTime date;
+  final String label;
+  final int rate; // 0-100
+  final int completedCount;
+  final int totalHabits;
+  const _DayProgress({
+    required this.date,
+    required this.label,
+    required this.rate,
+    required this.completedCount,
+    required this.totalHabits,
+  });
 }

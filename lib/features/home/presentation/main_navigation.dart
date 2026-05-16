@@ -7,6 +7,7 @@ import 'package:sakinah_flow/features/home/presentation/screens/leaderboard_scre
 import 'package:sakinah_flow/features/home/presentation/screens/habits_screen.dart';
 import 'package:sakinah_flow/features/home/presentation/screens/progress_screen.dart';
 import 'package:sakinah_flow/features/home/presentation/screens/more_screen.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
 final navigationIndexProvider = StateProvider<int>((ref) => 0);
 
@@ -26,6 +27,7 @@ class MainNavigation extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(navigationIndexProvider);
     final themeColors = ref.watch(themeColorsProvider);
+    final l = AppLocalizations.of(context);
 
     return Scaffold(
       body: IndexedStack(
@@ -54,12 +56,12 @@ class MainNavigation extends HookConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(ref, currentIndex, themeColors, 0, Icons.home_rounded, 'Home'),
-                _buildNavItem(ref, currentIndex, themeColors, 1, Icons.access_time_rounded, 'Prayer'),
-                _buildNavItem(ref, currentIndex, themeColors, 2, Icons.emoji_events_rounded, 'Leaders'),
-                _buildNavItem(ref, currentIndex, themeColors, 3, Icons.check_circle_rounded, 'Habits'),
-                _buildNavItem(ref, currentIndex, themeColors, 4, Icons.insights_rounded, 'Progress'),
-                _buildNavItem(ref, currentIndex, themeColors, 5, Icons.menu_rounded, 'More'),
+                _buildNavItem(ref, currentIndex, themeColors, 0, Icons.home_rounded, l.navHome),
+                _buildNavItem(ref, currentIndex, themeColors, 1, Icons.access_time_rounded, l.navPrayer),
+                _buildNavItem(ref, currentIndex, themeColors, 2, Icons.emoji_events_rounded, l.navLeaders),
+                _buildNavItem(ref, currentIndex, themeColors, 3, Icons.check_circle_rounded, l.navHabits),
+                _buildNavItem(ref, currentIndex, themeColors, 4, Icons.insights_rounded, l.navProgress),
+                _buildNavItem(ref, currentIndex, themeColors, 5, Icons.menu_rounded, l.navMore),
               ],
             ),
           ),

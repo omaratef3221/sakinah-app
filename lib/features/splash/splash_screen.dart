@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/features/auth/services/auth_gate.dart';
 import 'package:sakinah_flow/features/notifications/services/notification_service.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
 class SplashScreen extends HookConsumerWidget {
   const SplashScreen({super.key});
@@ -12,27 +15,26 @@ class SplashScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = ref.watch(themeColorsProvider);
+    final l = AppLocalizations.of(context);
 
     useEffect(() {
-      // Navigate to dashboard after 3 seconds and request notification permission
-      Future.delayed(const Duration(seconds: 3), () async {
-        if (context.mounted) {
-          // Request notification permission directly from the system
-          final hasPermission = await NotificationService().hasPermission();
-          if (!hasPermission) {
-            // This will trigger the native iOS/Android permission dialog
-            await NotificationService().requestPermission();
-          }
-
-          if (context.mounted) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const AuthGate()),
-            );
-          }
-        }
+      // Short, single-shot splash — long enough to let the fade-in finish,
+      // then we hand off to AuthGate. The notification permission dialog
+      // is moved off the splash path (AuthGate / first-launch UX should
+      // request it at the right moment, not while you're still looking at
+      // a logo).
+      Future.delayed(const Duration(milliseconds: 1500), () async {
+        if (!context.mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AuthGate()),
+        );
+        // Fire notification permission request in the background — it'll
+        // surface a native dialog over whatever screen comes next without
+        // delaying the launch.
+        unawaited(_requestNotificationPermissionInBackground());
       });
       return null;
-    }, []);
+    }, const []);
 
     return Scaffold(
       body: Container(
@@ -43,7 +45,9 @@ class SplashScreen extends HookConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // App Icon/Logo
+              // App icon: fade in once and HOLD. The earlier code used
+              // controller.repeat() which made the logo flicker on/off
+              // forever.
               Container(
                 width: 120,
                 height: 120,
@@ -61,20 +65,20 @@ class SplashScreen extends HookConsumerWidget {
                   color: Colors.white,
                 ),
               )
-                  .animate(onPlay: (controller) => controller.repeat())
-                  .fadeIn(duration: 1000.ms)
+                  .animate()
+                  .fadeIn(duration: 600.ms)
                   .scale(
-                    begin: const Offset(0.8, 0.8),
+                    begin: const Offset(0.85, 0.85),
                     end: const Offset(1.0, 1.0),
-                    duration: 1000.ms,
+                    duration: 600.ms,
+                    curve: Curves.easeOut,
                   ),
 
               const SizedBox(height: 40),
 
-              // App Name
-              const Text(
-                'Sakinah',
-                style: TextStyle(
+              Text(
+                l.appName,
+                style: const TextStyle(
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -82,14 +86,13 @@ class SplashScreen extends HookConsumerWidget {
                 ),
               )
                   .animate()
-                  .fadeIn(delay: 300.ms, duration: 800.ms)
-                  .slideY(begin: 0.3, end: 0, duration: 800.ms),
+                  .fadeIn(delay: 200.ms, duration: 500.ms)
+                  .slideY(begin: 0.2, end: 0, duration: 500.ms),
 
               const SizedBox(height: 12),
 
-              // Subtitle
               Text(
-                'Find Peace in Every Moment',
+                l.splashTagline,
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.white.withValues(alpha: 0.9),
@@ -97,41 +100,39 @@ class SplashScreen extends HookConsumerWidget {
                 ),
               )
                   .animate()
-                  .fadeIn(delay: 600.ms, duration: 800.ms)
-                  .slideY(begin: 0.3, end: 0, duration: 800.ms),
+                  .fadeIn(delay: 400.ms, duration: 500.ms)
+                  .slideY(begin: 0.2, end: 0, duration: 500.ms),
 
               const SizedBox(height: 60),
 
-              // Loading indicator
+              // Spinner: fade in once, the spinning itself comes from
+              // CircularProgressIndicator's own animation.
               SizedBox(
-                width: 40,
-                height: 40,
+                width: 36,
+                height: 36,
                 child: CircularProgressIndicator(
                   strokeWidth: 3,
                   valueColor: AlwaysStoppedAnimation<Color>(
                     Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
-              )
-                  .animate(onPlay: (controller) => controller.repeat())
-                  .fadeIn(delay: 1000.ms, duration: 500.ms),
-
-              const SizedBox(height: 20),
-
-              // Loading text
-              Text(
-                'Loading your spiritual journey...',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.white.withValues(alpha: 0.7),
-                ),
-              )
-                  .animate(onPlay: (controller) => controller.repeat(reverse: true))
-                  .fadeIn(delay: 1200.ms, duration: 1500.ms),
+              ).animate().fadeIn(delay: 600.ms, duration: 400.ms),
             ],
           ),
         ),
       ),
     );
   }
+
+  Future<void> _requestNotificationPermissionInBackground() async {
+    try {
+      final hasPermission = await NotificationService().hasPermission();
+      if (!hasPermission) {
+        await NotificationService().requestPermission();
+      }
+    } catch (_) {
+      // Best-effort — never block startup on this.
+    }
+  }
 }
+

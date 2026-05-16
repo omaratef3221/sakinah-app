@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:sakinah_flow/features/auth/data/auth_repository.dart';
 import 'package:sakinah_flow/features/auth/providers/auth_provider.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
 /// Apple + Google sign-in buttons. Apple is hidden on platforms where
 /// Sign in with Apple isn't available (per Apple's guideline 4.8).
@@ -27,7 +28,7 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
       if (e.code == 'cancelled') return;
       _showError(e.message);
     } catch (e) {
-      _showError('Apple sign-in failed: $e');
+      if (mounted) _showError(AppLocalizations.of(context).socialAppleFailed);
     } finally {
       if (mounted) setState(() => _appleLoading = false);
     }
@@ -42,7 +43,7 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
       if (e.code == 'cancelled') return;
       _showError(e.message);
     } catch (e) {
-      _showError('Google sign-in failed: $e');
+      if (mounted) _showError(AppLocalizations.of(context).socialGoogleFailed);
     } finally {
       if (mounted) setState(() => _googleLoading = false);
     }
@@ -61,12 +62,13 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
   @override
   Widget build(BuildContext context) {
     final showApple = ref.read(authRepositoryProvider).isAppleSignInAvailable;
+    final l = AppLocalizations.of(context);
 
     return Column(
       children: [
         if (showApple) ...[
           _SocialButton(
-            label: 'Continue with Apple',
+            label: l.socialContinueWithApple,
             icon: Icons.apple,
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
@@ -76,7 +78,7 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
           const SizedBox(height: 12),
         ],
         _SocialButton(
-          label: 'Continue with Google',
+          label: l.socialContinueWithGoogle,
           icon: Icons.g_mobiledata_rounded,
           iconSize: 32,
           backgroundColor: Colors.white,

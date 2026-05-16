@@ -25,7 +25,11 @@
       "Bash(export PATH=\"$PATH:$HOME/.pub-cache/bin\")",
       "Bash(firebase logout *)",
       "Bash(flutterfire configure *)",
-      "Bash(/Users/omaratef/develop/flutter/bin/flutter pub *)"
+      "Bash(/Users/omaratef/develop/flutter/bin/flutter pub *)",
+      "Bash(/usr/libexec/PlistBuddy -c \"Print :REVERSED_CLIENT_ID\" /Users/omaratef/MobileApps/Sakinah/ios/Runner/GoogleService-Info.plist)",
+      "Bash(/usr/libexec/PlistBuddy -c \"Print :CLIENT_ID\" /Users/omaratef/MobileApps/Sakinah/ios/Runner/GoogleService-Info.plist)",
+      "Bash(/usr/libexec/PlistBuddy -c \"Print :BUNDLE_ID\" /Users/omaratef/MobileApps/Sakinah/ios/Runner/GoogleService-Info.plist)",
+      "Bash(/Users/omaratef/develop/flutter/bin/flutter gen-l10n *)"
     ]
   }
 }

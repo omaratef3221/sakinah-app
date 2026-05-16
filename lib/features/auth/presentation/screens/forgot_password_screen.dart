@@ -4,6 +4,7 @@ import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/features/auth/data/auth_repository.dart';
 import 'package:sakinah_flow/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:sakinah_flow/features/auth/providers/auth_provider.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -37,7 +38,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     } on AuthFailure catch (e) {
       _showError(e.message);
     } catch (e) {
-      _showError('Could not send reset email: $e');
+      if (mounted) {
+        _showError(AppLocalizations.of(context).forgotErrorGeneric);
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -56,6 +59,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final themeColors = ref.watch(themeColorsProvider);
+    final l = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -74,9 +78,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 24),
-                  const Text(
-                    'Reset Password',
-                    style: TextStyle(
+                  Text(
+                    l.forgotTitle,
+                    style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
@@ -84,9 +88,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    _sent
-                        ? "If an account exists for that email, we've sent a reset link. Check your inbox."
-                        : 'Enter your email and we will send you a link to reset your password.',
+                    _sent ? l.forgotBodyAfter : l.forgotBodyBefore,
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.white.withValues(alpha: 0.7),
@@ -96,19 +98,19 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   if (!_sent) ...[
                     AuthTextField(
                       controller: _emailController,
-                      label: 'Email',
-                      hint: 'you@example.com',
+                      label: l.loginEmailLabel,
+                      hint: l.loginEmailHint,
                       icon: Icons.email_rounded,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.done,
                       onSubmitted: (_) => _sendResetEmail(),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
-                          return 'Enter your email';
+                          return l.loginErrorEnterEmail;
                         }
                         final regex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
                         if (!regex.hasMatch(v.trim())) {
-                          return 'Enter a valid email address';
+                          return l.loginErrorInvalidEmail;
                         }
                         return null;
                       },
@@ -126,7 +128,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                   strokeWidth: 2.5,
                                 ),
                               )
-                            : const Text('Send Reset Link'),
+                            : Text(l.forgotSendButton),
                       ),
                     ),
                   ] else
@@ -134,7 +136,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                       height: 52,
                       child: ElevatedButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Back to Sign In'),
+                        child: Text(l.forgotBackButton),
                       ),
                     ),
                 ],

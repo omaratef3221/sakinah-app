@@ -1,0 +1,13 @@
+# Flutter l10n codegen config. Run `flutter gen-l10n` (or it runs
+# automatically on `flutter pub get` / build) to regenerate the
+# `AppLocalizations` class from the .arb files under `lib/l10n/`.
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+nullable-getter: false
+# Generate into the source tree so imports are stable and the files are
+# visible in the IDE. Without this, files land in .dart_tool/ and
+# imports fail.
+output-dir: lib/l10n/generated
+synthetic-package: false

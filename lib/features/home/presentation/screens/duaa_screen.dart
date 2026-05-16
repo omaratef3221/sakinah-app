@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/core/services/asset_data_cache.dart';
 import 'package:sakinah_flow/core/widgets/glass_card.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
-class DuaaScreen extends StatefulWidget {
+class DuaaScreen extends ConsumerStatefulWidget {
   const DuaaScreen({super.key});
 
   @override
-  State<DuaaScreen> createState() => _DuaaScreenState();
+  ConsumerState<DuaaScreen> createState() => _DuaaScreenState();
 }
 
-class _DuaaScreenState extends State<DuaaScreen> {
+class _DuaaScreenState extends ConsumerState<DuaaScreen> {
   List<dynamic> _duas = [];
   bool _isLoading = true;
 
@@ -36,6 +39,7 @@ class _DuaaScreenState extends State<DuaaScreen> {
   }
 
   void _showDuaDetails(Map<String, dynamic> dua) {
+    final l = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -87,7 +91,7 @@ class _DuaaScreenState extends State<DuaaScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              dua['category'] ?? 'Dua',
+                              dua['category'] ?? l.duaaCategoryFallback,
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -180,9 +184,9 @@ class _DuaaScreenState extends State<DuaaScreen> {
                       ),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'Done',
-                      style: TextStyle(
+                    child: Text(
+                      l.commonDone,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -199,18 +203,11 @@ class _DuaaScreenState extends State<DuaaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = ref.watch(themeColorsProvider);
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1A5F4E),
-              Color(0xFF0F3D30),
-              Color(0xFF0A1F1A),
-            ],
-          ),
+        decoration: BoxDecoration(
+          gradient: themeColors.backgroundGradient,
         ),
         child: SafeArea(
           child: Column(
@@ -234,26 +231,14 @@ class _DuaaScreenState extends State<DuaaScreen> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Duas Collection',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFD4AF37),
-                            ),
-                          ),
-                          Text(
-                            'مجموعة الأدعية',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFFD4AF37),
-                            ),
-                          ),
-                        ],
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.of(context).duaaTitle,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFD4AF37),
+                        ),
                       ),
                     ),
                   ],
@@ -269,7 +254,7 @@ class _DuaaScreenState extends State<DuaaScreen> {
                     : _duas.isEmpty
                         ? Center(
                             child: Text(
-                              'No duas found',
+                              AppLocalizations.of(context).duaaEmpty,
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.7),
                                 fontSize: 16,
@@ -318,7 +303,8 @@ class _DuaaScreenState extends State<DuaaScreen> {
                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    dua['category'] ?? 'General',
+                                                    dua['category'] ??
+                                                        AppLocalizations.of(context).duaaGeneralCategory,
                                                     style: const TextStyle(
                                                       fontSize: 16,
                                                       fontWeight: FontWeight.bold,

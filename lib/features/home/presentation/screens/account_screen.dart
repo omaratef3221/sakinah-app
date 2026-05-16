@@ -6,6 +6,7 @@ import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/core/widgets/glass_card.dart';
 import 'package:sakinah_flow/features/auth/presentation/widgets/account_section.dart';
 import 'package:sakinah_flow/features/auth/providers/auth_provider.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -29,7 +30,8 @@ class AccountScreen extends ConsumerWidget {
                     const AccountSection(),
                     if (user != null) ...[
                       const SizedBox(height: 20),
-                      const _SectionLabel('Account Details'),
+                      _SectionLabel(
+                          AppLocalizations.of(context).accountDetailsHeader),
                       const SizedBox(height: 12),
                       _AccountDetailsCard(user: user),
                     ],
@@ -67,22 +69,13 @@ class _AccountHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Account',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFD4AF37),
-                ),
-              ),
-              Text(
-                'الحساب',
-                style: TextStyle(fontSize: 14, color: Color(0xFFD4AF37)),
-              ),
-            ],
+          Text(
+            AppLocalizations.of(context).accountScreenTitle,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFD4AF37),
+            ),
           ),
         ],
       ),
@@ -113,16 +106,18 @@ class _AccountDetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatter = DateFormat.yMMMMd().add_jm();
+    final l = AppLocalizations.of(context);
+    final localeStr = Localizations.localeOf(context).toString();
+    final formatter = DateFormat.yMMMMd(localeStr).add_jm();
     final created = user.metadata.creationTime;
     final lastSignIn = user.metadata.lastSignInTime;
     final providerId = user.providerData.isNotEmpty
         ? user.providerData.first.providerId
         : 'password';
     final providerLabel = switch (providerId) {
-      'google.com' => 'Google',
-      'apple.com' => 'Apple',
-      'password' => 'Email & password',
+      'google.com' => l.accountProviderGoogle,
+      'apple.com' => l.accountProviderApple,
+      'password' => l.accountProviderEmailLong,
       _ => providerId,
     };
 
@@ -132,24 +127,26 @@ class _AccountDetailsCard extends StatelessWidget {
         children: [
           _DetailRow(
             icon: Icons.email_rounded,
-            label: 'Email',
+            label: l.accountFieldEmail,
             value: user.email ?? '—',
           ),
           if (user.displayName != null && user.displayName!.isNotEmpty)
             _DetailRow(
               icon: Icons.person_rounded,
-              label: 'Name',
+              label: l.accountFieldName,
               value: user.displayName!,
             ),
           _DetailRow(
             icon: Icons.verified_user_rounded,
-            label: 'Sign-in method',
+            label: l.accountFieldSignInMethod,
             value: providerLabel,
           ),
           _DetailRow(
             icon: Icons.shield_rounded,
-            label: 'Email verified',
-            value: user.emailVerified ? 'Yes' : 'Not yet',
+            label: l.accountFieldEmailVerified,
+            value: user.emailVerified
+                ? l.accountFieldEmailVerifiedYes
+                : l.accountFieldEmailVerifiedNo,
             valueColor: user.emailVerified
                 ? const Color(0xFF10B981)
                 : const Color(0xFFF59E0B),
@@ -157,18 +154,18 @@ class _AccountDetailsCard extends StatelessWidget {
           if (created != null)
             _DetailRow(
               icon: Icons.calendar_today_rounded,
-              label: 'Joined',
+              label: l.accountFieldJoined,
               value: formatter.format(created),
             ),
           if (lastSignIn != null)
             _DetailRow(
               icon: Icons.schedule_rounded,
-              label: 'Last sign-in',
+              label: l.accountFieldLastSignIn,
               value: formatter.format(lastSignIn),
             ),
           _DetailRow(
             icon: Icons.fingerprint_rounded,
-            label: 'User ID',
+            label: l.accountFieldUserId,
             value: user.uid,
             monospace: true,
             isLast: true,

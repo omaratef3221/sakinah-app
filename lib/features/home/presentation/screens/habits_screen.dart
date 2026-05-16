@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/core/widgets/glass_card.dart';
 import 'package:sakinah_flow/core/widgets/empty_state.dart';
 import 'package:sakinah_flow/core/shared_models/habit_category.dart';
 import 'package:sakinah_flow/features/habits/providers/habits_database_provider.dart';
 import 'package:sakinah_flow/features/habits/presentation/add_habit_screen.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
 final selectedCategoryProvider = StateProvider<String>((ref) => 'all');
 
@@ -18,18 +20,12 @@ class HabitsScreen extends HookConsumerWidget {
     final fardHabitsAsync = ref.watch(watchFardHabitsProvider);
     final sunnahHabitsAsync = ref.watch(watchSunnahHabitsProvider);
     final searchQuery = useState('');
+    final l = AppLocalizations.of(context);
+    final themeColors = ref.watch(themeColorsProvider);
 
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF1A5F4E),
-            Color(0xFF0F3D30),
-            Color(0xFF0A1F1A),
-          ],
-        ),
+      decoration: BoxDecoration(
+        gradient: themeColors.backgroundGradient,
       ),
       child: SafeArea(
         child: CustomScrollView(
@@ -41,11 +37,11 @@ class HabitsScreen extends HookConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeader(context),
+                    _buildHeader(context, l),
                     const SizedBox(height: 24),
-                    _buildSearchBar(searchQuery),
+                    _buildSearchBar(searchQuery, l),
                     const SizedBox(height: 16),
-                    _buildCategoryFilter(ref, selectedCategory),
+                    _buildCategoryFilter(ref, selectedCategory, l),
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -60,6 +56,7 @@ class HabitsScreen extends HookConsumerWidget {
                 sunnahHabitsAsync,
                 ref,
                 searchQuery.value,
+                l,
               ),
             ),
             const SliverToBoxAdapter(
@@ -71,27 +68,19 @@ class HabitsScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, AppLocalizations l) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Column(
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'My Habits',
-              style: TextStyle(
+              l.habitsTitle,
+              style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFFD4AF37),
-              ),
-            ),
-            Text(
-              'عاداتي',
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFFD4AF37),
-                fontWeight: FontWeight.w300,
               ),
             ),
           ],
@@ -131,7 +120,8 @@ class HabitsScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildSearchBar(ValueNotifier<String> searchQuery) {
+  Widget _buildSearchBar(
+      ValueNotifier<String> searchQuery, AppLocalizations l) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.9),
@@ -148,7 +138,7 @@ class HabitsScreen extends HookConsumerWidget {
           fontSize: 16,
         ),
         decoration: InputDecoration(
-          hintText: 'Type a habit to search for',
+          hintText: l.habitsSearchHint,
           hintStyle: TextStyle(
             color: Colors.black.withValues(alpha: 0.4),
             fontSize: 14,
@@ -176,37 +166,21 @@ class HabitsScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildCategoryFilter(WidgetRef ref, String selectedCategory) {
+  Widget _buildCategoryFilter(
+      WidgetRef ref, String selectedCategory, AppLocalizations l) {
     return Row(
       children: [
         Expanded(
-          child: _buildFilterChip(
-            'All',
-            'الكل',
-            'all',
-            selectedCategory,
-            ref,
-          ),
+          child: _buildFilterChip(l.habitsFilterAll, 'all', selectedCategory, ref),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _buildFilterChip(
-            'Fard',
-            'فرض',
-            'fard',
-            selectedCategory,
-            ref,
-          ),
+          child: _buildFilterChip(l.habitsFilterFard, 'fard', selectedCategory, ref),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _buildFilterChip(
-            'Sunnah',
-            'سنة',
-            'sunnah',
-            selectedCategory,
-            ref,
-          ),
+          child:
+              _buildFilterChip(l.habitsFilterSunnah, 'sunnah', selectedCategory, ref),
         ),
       ],
     );
@@ -214,7 +188,6 @@ class HabitsScreen extends HookConsumerWidget {
 
   Widget _buildFilterChip(
     String label,
-    String arabicLabel,
     String value,
     String selectedCategory,
     WidgetRef ref,
@@ -240,26 +213,14 @@ class HabitsScreen extends HookConsumerWidget {
             width: 1.5,
           ),
         ),
-        child: Column(
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                color: isSelected ? const Color(0xFF0A1F1A) : Colors.white,
-              ),
-            ),
-            Text(
-              arabicLabel,
-              style: TextStyle(
-                fontSize: 12,
-                color: isSelected
-                    ? const Color(0xFF0A1F1A).withValues(alpha: 0.7)
-                    : Colors.white.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            color: isSelected ? const Color(0xFF0A1F1A) : Colors.white,
+          ),
         ),
       ),
     );
@@ -272,6 +233,7 @@ class HabitsScreen extends HookConsumerWidget {
     AsyncValue<List<dynamic>> sunnahHabitsAsync,
     WidgetRef ref,
     String searchQuery,
+    AppLocalizations l,
   ) {
     return fardHabitsAsync.when(
       data: (fardHabits) => sunnahHabitsAsync.when(
@@ -296,10 +258,10 @@ class HabitsScreen extends HookConsumerWidget {
           if (habitsToShow.isEmpty) {
             return SliverToBoxAdapter(
               child: EmptyState(
-                title: 'No Habits Yet',
-                subtitle: 'Start building your spiritual routine by adding habits from our curated collection',
+                title: l.habitsEmptyTitle,
+                subtitle: l.habitsEmptySubtitle,
                 icon: Icons.add_circle_outline_rounded,
-                actionText: 'Add Your First Habit',
+                actionText: l.habitsEmptyAction,
                 onAction: () {
                   Navigator.push(
                     context,
@@ -318,7 +280,7 @@ class HabitsScreen extends HookConsumerWidget {
                 final habit = habitsToShow[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildHabitCard(habit, ref),
+                  child: _buildHabitCard(context, habit, ref),
                 );
               },
               childCount: habitsToShow.length,
@@ -346,10 +308,13 @@ class HabitsScreen extends HookConsumerWidget {
         now.day == lastCompleted.day;
   }
 
-  Widget _buildHabitCard(dynamic habit, WidgetRef ref) {
+  Widget _buildHabitCard(BuildContext context, dynamic habit, WidgetRef ref) {
     final isFard = habit.category == HabitCategory.fard;
+    final l = AppLocalizations.of(context);
 
-    return GlassCard(
+    return GestureDetector(
+      onLongPress: () => _showBackdateSheet(context, ref, habit),
+      child: GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -415,7 +380,9 @@ class HabitsScreen extends HookConsumerWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isFard ? 'Fard • فرض' : 'Sunnah • سنة',
+                        isFard
+                            ? l.habitsCategoryFard
+                            : l.habitsCategorySunnah,
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -514,7 +481,7 @@ class HabitsScreen extends HookConsumerWidget {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  '${habit.currentStreak} day streak',
+                  l.habitsDayStreak(habit.currentStreak as int),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -526,6 +493,110 @@ class HabitsScreen extends HookConsumerWidget {
           ],
         ],
       ),
+      ),
     );
+  }
+
+  // Bottom sheet that lets the user pick a past date and toggle a habit's
+  // completion on that date. Triggered by long-pressing the habit card.
+  Future<void> _showBackdateSheet(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic habit,
+  ) async {
+    final l = AppLocalizations.of(context);
+    final database = ref.read(habitsDatabaseProvider);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final firstDate = today.subtract(const Duration(days: 90));
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: today,
+      firstDate: firstDate,
+      lastDate: today,
+      helpText: l.habitsBackdateHelp(habit.title as String),
+      cancelText: l.commonCancel,
+      confirmText: l.commonNext,
+    );
+    if (picked == null) return;
+    if (!context.mounted) return;
+
+    final pickedDay = DateTime(picked.year, picked.month, picked.day);
+    final alreadyDone = await database.isCompletedOnDate(habit.id, pickedDay);
+    if (!context.mounted) return;
+
+    final dateLabel =
+        '${pickedDay.year}-${pickedDay.month.toString().padLeft(2, '0')}-${pickedDay.day.toString().padLeft(2, '0')}';
+
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF0F3D30),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                habit.title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                dateLabel,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (alreadyDone) ...[
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.of(ctx).pop('uncomplete'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEF4444),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  icon: const Icon(Icons.undo_rounded),
+                  label: Text(l.habitsBackdateRemove),
+                ),
+              ] else ...[
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.of(ctx).pop('complete'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD4AF37),
+                    foregroundColor: const Color(0xFF0A1F1A),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  icon: const Icon(Icons.check_rounded),
+                  label: Text(l.habitsBackdateMarkComplete),
+                ),
+              ],
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text(l.commonCancel),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (action == 'complete') {
+      await database.completeHabitOnDate(habit.id, pickedDay);
+    } else if (action == 'uncomplete') {
+      await database.uncompleteHabitOnDate(habit.id, pickedDay);
+    }
   }
 }

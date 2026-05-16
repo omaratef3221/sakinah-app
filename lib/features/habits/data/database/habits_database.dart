@@ -254,6 +254,82 @@ class HabitsDatabase extends _$HabitsDatabase {
     return streak;
   }
 
+  // Mark a habit complete on a specific past date (back-fill). Today's
+  // completion uses [completeHabit] which has additional sync-race guards;
+  // back-fills don't need those because they apply to history, not "now".
+  //
+  // Idempotent: no-op if already marked complete on that date.
+  // Rejects future dates (you can't complete tomorrow yet).
+  Future<void> completeHabitOnDate(int id, DateTime date) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final targetDay = DateTime(date.year, date.month, date.day);
+    if (targetDay.isAfter(today)) return; // future-dated, ignore
+
+    await transaction(() async {
+      final habit = await getHabitById(id);
+      if (habit == null) return;
+
+      final alreadyDone = await isCompletedOnDate(id, targetDay);
+      if (alreadyDone) return;
+
+      await into(habitCompletions).insert(
+        HabitCompletionsCompanion.insert(
+          habitId: id,
+          completedAt: targetDay,
+          updatedAt: Value(now),
+        ),
+      );
+
+      // Recompute streak + lastCompleted from the (now updated) history.
+      final newStreak = await _computeStreakFromHistory(id, habit.isShielded);
+      final newBestStreak =
+          newStreak > habit.bestStreak ? newStreak : habit.bestStreak;
+      final completions = await getCompletionsForHabit(id);
+      final newLastCompleted =
+          completions.isEmpty ? null : completions.first.completedAt;
+
+      await (update(habits)..where((h) => h.id.equals(id))).write(
+        HabitsCompanion(
+          currentStreak: Value(newStreak),
+          bestStreak: Value(newBestStreak),
+          lastCompleted: Value(newLastCompleted),
+          updatedAt: Value(now),
+        ),
+      );
+    });
+  }
+
+  // Undo a back-dated completion. Same as [uncompleteHabit] but for any
+  // arbitrary past date.
+  Future<void> uncompleteHabitOnDate(int id, DateTime date) async {
+    final now = DateTime.now();
+    final targetDay = DateTime(date.year, date.month, date.day);
+
+    await transaction(() async {
+      final habit = await getHabitById(id);
+      if (habit == null) return;
+
+      final hasCompletion = await isCompletedOnDate(id, targetDay);
+      if (!hasCompletion) return;
+
+      await deleteCompletion(id, targetDay);
+
+      final newStreak = await _computeStreakFromHistory(id, habit.isShielded);
+      final completions = await getCompletionsForHabit(id);
+      final newLastCompleted =
+          completions.isEmpty ? null : completions.first.completedAt;
+
+      await (update(habits)..where((h) => h.id.equals(id))).write(
+        HabitsCompanion(
+          currentStreak: Value(newStreak),
+          lastCompleted: Value(newLastCompleted),
+          updatedAt: Value(now),
+        ),
+      );
+    });
+  }
+
   // Remove today's completion and recompute the streak from history.
   // Wrapped in a transaction so UI sees one atomic update.
   Future<void> uncompleteHabit(int id) async {

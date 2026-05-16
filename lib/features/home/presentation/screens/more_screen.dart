@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/core/widgets/glass_card.dart';
 import 'package:sakinah_flow/features/home/presentation/screens/account_screen.dart';
 import 'package:sakinah_flow/features/home/presentation/screens/quran_screen.dart';
@@ -7,23 +9,18 @@ import 'package:sakinah_flow/features/home/presentation/screens/duaa_screen.dart
 import 'package:sakinah_flow/features/home/presentation/screens/umrah_guide_screen.dart';
 import 'package:sakinah_flow/features/home/presentation/screens/hajj_guide_screen.dart';
 import 'package:sakinah_flow/features/home/presentation/screens/settings_screen.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
-class MoreScreen extends StatelessWidget {
+class MoreScreen extends ConsumerWidget {
   const MoreScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final themeColors = ref.watch(themeColorsProvider);
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF1A5F4E),
-            Color(0xFF0F3D30),
-            Color(0xFF0A1F1A),
-          ],
-        ),
+      decoration: BoxDecoration(
+        gradient: themeColors.backgroundGradient,
       ),
       child: SafeArea(
         child: CustomScrollView(
@@ -35,28 +32,19 @@ class MoreScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'More',
-                      style: TextStyle(
+                    Text(
+                      l.moreTitle,
+                      style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFFD4AF37),
-                      ),
-                    ),
-                    const Text(
-                      'المزيد',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFD4AF37),
-                        fontWeight: FontWeight.w300,
                       ),
                     ),
                     const SizedBox(height: 24),
                     _buildMenuCard(
                       context,
                       icon: Icons.person_rounded,
-                      title: 'Account',
-                      arabicTitle: 'الحساب',
+                      title: l.moreAccount,
                       color: const Color(0xFF3B82F6),
                       onTap: () => Navigator.push(
                         context,
@@ -69,8 +57,7 @@ class MoreScreen extends StatelessWidget {
                     _buildMenuCard(
                       context,
                       icon: Icons.menu_book_rounded,
-                      title: 'Quran',
-                      arabicTitle: 'القرآن الكريم',
+                      title: l.moreQuran,
                       color: const Color(0xFF10B981),
                       onTap: () => Navigator.push(
                         context,
@@ -83,8 +70,7 @@ class MoreScreen extends StatelessWidget {
                     _buildMenuCard(
                       context,
                       icon: Icons.wb_twilight_rounded,
-                      title: 'Athkar',
-                      arabicTitle: 'الأذكار',
+                      title: l.moreAthkar,
                       color: const Color(0xFF8B5CF6),
                       onTap: () => Navigator.push(
                         context,
@@ -97,8 +83,7 @@ class MoreScreen extends StatelessWidget {
                     _buildMenuCard(
                       context,
                       icon: Icons.volunteer_activism_rounded,
-                      title: 'Duaa',
-                      arabicTitle: 'الأدعية',
+                      title: l.moreDuaa,
                       color: const Color(0xFFF59E0B),
                       onTap: () => Navigator.push(
                         context,
@@ -111,8 +96,7 @@ class MoreScreen extends StatelessWidget {
                     _buildMenuCard(
                       context,
                       icon: Icons.mosque_rounded,
-                      title: 'Umrah Guide',
-                      arabicTitle: 'دليل العمرة',
+                      title: l.moreUmrahGuide,
                       color: const Color(0xFFEC4899),
                       onTap: () => Navigator.push(
                         context,
@@ -125,8 +109,7 @@ class MoreScreen extends StatelessWidget {
                     _buildMenuCard(
                       context,
                       icon: Icons.mosque_rounded,
-                      title: 'Hajj Guide',
-                      arabicTitle: 'دليل الحج',
+                      title: l.moreHajjGuide,
                       color: const Color(0xFF14B8A6),
                       onTap: () => Navigator.push(
                         context,
@@ -139,8 +122,7 @@ class MoreScreen extends StatelessWidget {
                     _buildMenuCard(
                       context,
                       icon: Icons.settings_rounded,
-                      title: 'Settings',
-                      arabicTitle: 'الإعدادات',
+                      title: l.moreSettings,
                       color: const Color(0xFF6B7280),
                       onTap: () => Navigator.push(
                         context,
@@ -164,7 +146,6 @@ class MoreScreen extends StatelessWidget {
     BuildContext context, {
     required IconData icon,
     required String title,
-    required String arabicTitle,
     required Color color,
     required VoidCallback onTap,
   }) {
@@ -209,13 +190,6 @@ class MoreScreen extends StatelessWidget {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    arabicTitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
                 ],

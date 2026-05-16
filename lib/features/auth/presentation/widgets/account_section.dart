@@ -6,6 +6,7 @@ import 'package:sakinah_flow/features/auth/data/auth_repository.dart';
 import 'package:sakinah_flow/features/auth/presentation/screens/login_screen.dart';
 import 'package:sakinah_flow/features/auth/providers/auth_provider.dart';
 import 'package:sakinah_flow/features/sync/services/sync_service.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
 /// Account / sign-in card shown at the top of Settings.
 ///
@@ -37,6 +38,7 @@ class _GuestCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -56,30 +58,21 @@ class _GuestCard extends ConsumerWidget {
                     color: Colors.white, size: 24),
               ),
               const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Save your progress',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      'احفظ تقدّمك',
-                      style: TextStyle(fontSize: 12, color: Colors.white70),
-                    ),
-                  ],
+              Expanded(
+                child: Text(
+                  l.accountCardSaveTitle,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            'Sign in to back up your habits and streaks across devices.',
+            l.accountCardSaveBody,
             style: TextStyle(
               fontSize: 13,
               color: Colors.white.withValues(alpha: 0.75),
@@ -98,7 +91,7 @@ class _GuestCard extends ConsumerWidget {
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                 );
               },
-              child: const Text('Sign In or Create Account'),
+              child: Text(l.accountCardSignInCta),
             ),
           ),
         ],
@@ -119,11 +112,11 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
   bool _busy = false;
 
   Future<void> _signOut() async {
+    final l = AppLocalizations.of(context);
     final confirmed = await _confirmDialog(
-      title: 'Sign out?',
-      body:
-          'Your local data stays on this device. Sign back in any time to resume cloud backup.',
-      confirmLabel: 'Sign out',
+      title: l.accountConfirmSignOutTitle,
+      body: l.accountConfirmSignOutBody,
+      confirmLabel: l.accountSignOut,
       destructive: false,
     );
     if (!confirmed) return;
@@ -134,18 +127,18 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
       // again (rather than silently treating them as guest).
       await ref.read(guestModeProvider.notifier).set(false);
     } catch (e) {
-      _showError('Sign out failed: $e');
+      if (mounted) _showError(AppLocalizations.of(context).authErrSignOutFailed);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _deleteAccount() async {
+    final l = AppLocalizations.of(context);
     final confirmed = await _confirmDialog(
-      title: 'Delete account?',
-      body:
-          'This permanently deletes your account and all cloud data. This cannot be undone.',
-      confirmLabel: 'Delete',
+      title: l.accountConfirmDeleteTitle,
+      body: l.accountConfirmDeleteBody,
+      confirmLabel: l.accountDeleteConfirmButton,
       destructive: true,
     );
     if (!confirmed) return;
@@ -184,15 +177,15 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
       await ref.read(guestModeProvider.notifier).set(false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account deleted.'),
-          backgroundColor: Color(0xFF10B981),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).accountDeleted),
+          backgroundColor: const Color(0xFF10B981),
         ),
       );
     } on AuthFailure catch (e) {
       _showError(e.message);
     } catch (e) {
-      _showError('Could not delete account: $e');
+      if (mounted) _showError(AppLocalizations.of(context).accountDeleteFailed);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -223,25 +216,26 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
       _showError(e.message);
       return false;
     } catch (e) {
-      _showError('Could not re-authenticate: $e');
+      if (mounted) _showError(AppLocalizations.of(context).accountReauthFailed);
       return false;
     }
   }
 
   Future<String?> _promptForPassword() async {
+    final l = AppLocalizations.of(context);
     final controller = TextEditingController();
     bool obscure = true;
     final result = await showDialog<String>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Confirm your password'),
+          title: Text(l.accountPasswordPromptTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'For security, please enter your password to confirm account deletion.',
-                style: TextStyle(fontSize: 13),
+              Text(
+                l.accountPasswordPromptBody,
+                style: const TextStyle(fontSize: 13),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -249,7 +243,7 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
                 obscureText: obscure,
                 autofocus: true,
                 decoration: InputDecoration(
-                  labelText: 'Password',
+                  labelText: l.loginPasswordLabel,
                   suffixIcon: IconButton(
                     icon: Icon(obscure
                         ? Icons.visibility_rounded
@@ -265,11 +259,11 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: Text(l.commonCancel),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(controller.text),
-              child: const Text('Confirm'),
+              child: Text(l.commonConfirm),
             ),
           ],
         ),
@@ -285,6 +279,7 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
     required String confirmLabel,
     required bool destructive,
   }) async {
+    final l = AppLocalizations.of(context);
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -293,7 +288,7 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l.commonCancel),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -325,15 +320,16 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
   @override
   Widget build(BuildContext context) {
     final user = widget.user;
+    final l = AppLocalizations.of(context);
     final email = user.email ?? '—';
     final name = user.displayName;
     final providerId = user.providerData.isNotEmpty
         ? user.providerData.first.providerId
         : 'password';
     final providerLabel = switch (providerId) {
-      'google.com' => 'Google',
-      'apple.com' => 'Apple',
-      'password' => 'Email',
+      'google.com' => l.accountProviderGoogle,
+      'apple.com' => l.accountProviderApple,
+      'password' => l.accountProviderEmail,
       _ => providerId,
     };
 
@@ -367,7 +363,7 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      name?.isNotEmpty == true ? name! : 'Signed in',
+                      name?.isNotEmpty == true ? name! : l.accountSignedInLabel,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -385,7 +381,9 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Signed in with $providerLabel${user.emailVerified ? ' • verified' : ''}',
+                      user.emailVerified
+                          ? l.accountSignedInVerified(providerLabel)
+                          : l.accountSignedInWith(providerLabel),
                       style: TextStyle(
                         fontSize: 11,
                         color: Colors.white.withValues(alpha: 0.55),
@@ -410,7 +408,7 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
                     foregroundColor: Colors.white,
                     side: BorderSide(color: Colors.white.withValues(alpha: 0.4)),
                   ),
-                  child: const Text('Sign out'),
+                  child: Text(l.accountSignOut),
                 ),
               ),
               const SizedBox(width: 12),
@@ -420,7 +418,7 @@ class _SignedInCardState extends ConsumerState<_SignedInCard> {
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFFEF4444),
                   ),
-                  child: const Text('Delete account'),
+                  child: Text(l.accountDeleteAccount),
                 ),
               ),
             ],
@@ -446,9 +444,9 @@ class _VerifyEmailRowState extends ConsumerState<_VerifyEmailRow> {
       await ref.read(authRepositoryProvider).sendEmailVerification();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Verification email sent.'),
-          backgroundColor: Color(0xFF10B981),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).accountVerifySent),
+          backgroundColor: const Color(0xFF10B981),
         ),
       );
     } on AuthFailure catch (e) {
@@ -473,13 +471,14 @@ class _VerifyEmailRowState extends ConsumerState<_VerifyEmailRow> {
       ref.read(authRefreshTickProvider.notifier).bump();
 
       if (!mounted) return;
+      final l = AppLocalizations.of(context);
       final verified =
           ref.read(authRepositoryProvider).currentUser?.emailVerified ?? false;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(verified
-              ? 'Email verified — thanks!'
-              : 'Not verified yet. Click the link in the email, then tap Refresh again.'),
+              ? l.accountVerifySuccess
+              : l.accountVerifyStillNot),
           backgroundColor:
               verified ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
         ),
@@ -487,7 +486,9 @@ class _VerifyEmailRowState extends ConsumerState<_VerifyEmailRow> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not refresh: $e')),
+        SnackBar(
+            content:
+                Text(AppLocalizations.of(context).accountVerifyRefreshFailed)),
       );
     } finally {
       if (mounted) setState(() => _refreshing = false);
@@ -497,6 +498,7 @@ class _VerifyEmailRowState extends ConsumerState<_VerifyEmailRow> {
   @override
   Widget build(BuildContext context) {
     final busy = _sending || _refreshing;
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -511,10 +513,10 @@ class _VerifyEmailRowState extends ConsumerState<_VerifyEmailRow> {
           const Icon(Icons.mark_email_unread_rounded,
               color: Color(0xFFF59E0B), size: 18),
           const SizedBox(width: 8),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Verify your email',
-              style: TextStyle(color: Colors.white, fontSize: 13),
+              l.accountVerifyEmail,
+              style: const TextStyle(color: Colors.white, fontSize: 13),
             ),
           ),
           TextButton(
@@ -525,11 +527,11 @@ class _VerifyEmailRowState extends ConsumerState<_VerifyEmailRow> {
                     height: 14,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Refresh'),
+                : Text(l.accountVerifyRefresh),
           ),
           TextButton(
             onPressed: busy ? null : _resend,
-            child: Text(_sending ? '...' : 'Resend'),
+            child: Text(_sending ? '...' : l.accountVerifyResend),
           ),
         ],
       ),

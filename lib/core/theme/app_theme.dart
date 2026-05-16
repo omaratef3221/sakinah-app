@@ -8,11 +8,18 @@ class AppTheme {
   // Builds a Material theme that matches the user-selected ThemeColors.
   // The visual app is mostly dark-on-gradient; this theme tunes Material
   // surfaces (dialogs, inputs, snackbars, FAB) to match the active accent.
-  static ThemeData buildTheme(ThemeColors colors) {
+  //
+  // [isArabic] swaps the default font family to Amiri for a more authentic
+  // Arabic feel — Amiri ships with the app and is already used for Quran
+  // text. We still keep Inter as the explicit family on the textTheme
+  // headlines so English content stays crisp when mixed-language.
+  static ThemeData buildTheme(ThemeColors colors, {bool isArabic = false}) {
+    final defaultFamily = isArabic ? 'Amiri' : 'Inter';
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: colors.background,
+      fontFamily: defaultFamily,
 
       colorScheme: ColorScheme.dark(
         primary: AppColors.gold,

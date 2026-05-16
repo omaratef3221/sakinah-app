@@ -15,6 +15,7 @@ import 'package:sakinah_flow/features/habits/presentation/add_habit_screen.dart'
 import 'package:sakinah_flow/features/salah/services/adhan_service.dart';
 import 'package:sakinah_flow/shared/services/location_provider.dart';
 import 'package:sakinah_flow/features/home/presentation/main_navigation.dart';
+import 'package:sakinah_flow/l10n/generated/app_localizations.dart';
 
 class DashboardScreen extends HookConsumerWidget {
   const DashboardScreen({super.key});
@@ -28,14 +29,17 @@ class DashboardScreen extends HookConsumerWidget {
         now.day == lastCompleted.day;
   }
 
-  Future<void> _getCurrentLocation(ValueNotifier<String> locationState) async {
+  Future<void> _getCurrentLocation(
+    ValueNotifier<String> locationState,
+    AppLocalizations l,
+  ) async {
     try {
-      locationState.value = 'Detecting location...';
+      locationState.value = l.dashLocDetecting;
 
       // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        locationState.value = 'Location services disabled';
+        locationState.value = l.dashLocDisabled;
         return;
       }
 
@@ -44,13 +48,13 @@ class DashboardScreen extends HookConsumerWidget {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          locationState.value = 'Location permission denied';
+          locationState.value = l.dashLocDenied;
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        locationState.value = 'Location permission permanently denied';
+        locationState.value = l.dashLocDeniedForever;
         return;
       }
 
@@ -81,15 +85,15 @@ class DashboardScreen extends HookConsumerWidget {
         final city = place.locality ??
                      place.subAdministrativeArea ??
                      place.administrativeArea ??
-                     'Unknown Location';
+                     l.dashLocUnknown;
         final country = place.country ?? '';
 
         locationState.value = country.isNotEmpty ? '$city, $country' : city;
       } else {
-        locationState.value = 'Location detected';
+        locationState.value = l.dashLocDetected;
       }
     } catch (e) {
-      locationState.value = 'Unable to detect location';
+      locationState.value = l.dashLocUnable;
     }
   }
 
@@ -99,13 +103,14 @@ class DashboardScreen extends HookConsumerWidget {
     final sunnahHabitsAsync = ref.watch(watchSunnahHabitsProvider);
     final prayerTimesAsync = ref.watch(prayerTimesNotifierProvider);
     final themeColors = ref.watch(themeColorsProvider);
-    final locationState = useState<String>('Loading...');
+    final l = AppLocalizations.of(context);
+    final locationState = useState<String>(l.dashLocLoading);
 
     useEffect(() {
       // Get location immediately
-      _getCurrentLocation(locationState);
+      _getCurrentLocation(locationState, l);
       return null;
-    }, []);
+    }, [l]);
 
     return Container(
       decoration: BoxDecoration(
@@ -121,37 +126,43 @@ class DashboardScreen extends HookConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeader(context, ref),
+                    _buildHeader(context, ref, l),
                     const SizedBox(height: 16),
                     const GuestBanner(),
                     prayerTimesAsync.when(
                       data: (prayerTimes) => _buildGreeting(
+                        context,
                         locationState.value,
                         locationState,
                         prayerTimes,
                         ref,
+                        l,
                       ),
                       loading: () => _buildGreeting(
+                        context,
                         locationState.value,
                         locationState,
                         null,
                         ref,
+                        l,
                       ),
                       error: (_, __) => _buildGreeting(
+                        context,
                         locationState.value,
                         locationState,
                         null,
                         ref,
+                        l,
                       ),
                     ),
                     const SizedBox(height: 24),
-                    _buildDuaOfTheDay(context),
+                    _buildDuaOfTheDay(context, l),
                     const SizedBox(height: 24),
-                    _buildStatsOverview(fardHabitsAsync, sunnahHabitsAsync),
+                    _buildStatsOverview(fardHabitsAsync, sunnahHabitsAsync, l),
                     const SizedBox(height: 24),
-                    _buildQuickActions(context, ref),
+                    _buildQuickActions(context, ref, l),
                     const SizedBox(height: 24),
-                    _buildTodayProgress(fardHabitsAsync, sunnahHabitsAsync),
+                    _buildTodayProgress(fardHabitsAsync, sunnahHabitsAsync, l),
                     const SizedBox(height: 80),
                   ],
                 ),
@@ -163,15 +174,19 @@ class DashboardScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, WidgetRef ref) {
+  Widget _buildHeader(
+      BuildContext context, WidgetRef ref, AppLocalizations l) {
     final now = DateTime.now();
     final hijriNow = HijriCalendar.now();
 
-    // Format Gregorian date
-    final gregorianDate = DateFormat('EEEE, MMMM d, yyyy').format(now);
+    // Format Gregorian date in the active locale.
+    final gregorianDate = DateFormat('EEEE, MMMM d, yyyy',
+            Localizations.localeOf(context).toString())
+        .format(now);
 
-    // Format Hijri date
-    final hijriDate = '${hijriNow.hDay} ${hijriNow.getLongMonthName()} ${hijriNow.hYear} هـ';
+    // Format Hijri date — month name is already Arabic; suffix "هـ" stays.
+    final hijriDate =
+        '${hijriNow.hDay} ${hijriNow.getLongMonthName()} ${hijriNow.hYear} هـ';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,23 +194,15 @@ class DashboardScreen extends HookConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Dashboard',
-                  style: TextStyle(
+                  l.dashTitle,
+                  style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFFD4AF37),
-                  ),
-                ),
-                Text(
-                  'لوحة القيادة',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFFD4AF37),
-                    fontWeight: FontWeight.w300,
                   ),
                 ),
               ],
@@ -289,6 +296,7 @@ class DashboardScreen extends HookConsumerWidget {
     final dua = duasList[random];
 
     if (!context.mounted) return;
+    final l = AppLocalizations.of(context);
 
     showDialog(
       context: context,
@@ -336,24 +344,16 @@ class DashboardScreen extends HookConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Dua of the Day',
-                              style: TextStyle(
+                              l.dashDuaTitle,
+                              style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFFD4AF37),
-                              ),
-                            ),
-                            Text(
-                              'دعاء اليوم',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFFD4AF37),
-                                fontWeight: FontWeight.w300,
                               ),
                             ),
                           ],
@@ -463,9 +463,9 @@ class DashboardScreen extends HookConsumerWidget {
                       ),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'Done',
-                      style: TextStyle(
+                    child: Text(
+                      l.commonDone,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -480,7 +480,7 @@ class DashboardScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildDuaOfTheDay(BuildContext context) {
+  Widget _buildDuaOfTheDay(BuildContext context, AppLocalizations l) {
     return GestureDetector(
       onTap: () => _showDuaPopup(context),
       child: GlassCard(
@@ -517,31 +517,22 @@ class DashboardScreen extends HookConsumerWidget {
               ),
             ),
             const SizedBox(width: 16),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Dua of the Day',
-                    style: TextStyle(
+                    l.dashDuaTitle,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
-                    'دعاء اليوم',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFFD4AF37),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Tap to read today\'s dua',
-                    style: TextStyle(
+                    l.dashDuaTapToRead,
+                    style: const TextStyle(
                       fontSize: 12,
                       color: Colors.white70,
                       fontStyle: FontStyle.italic,
@@ -587,10 +578,12 @@ class DashboardScreen extends HookConsumerWidget {
   }
 
   Widget _buildGreeting(
+    BuildContext context,
     String location,
     ValueNotifier<String> locationState,
     PrayerTimes? prayerTimes,
     WidgetRef ref,
+    AppLocalizations l,
   ) {
     final hour = DateTime.now().hour;
     String greeting;
@@ -600,28 +593,51 @@ class DashboardScreen extends HookConsumerWidget {
 
     // Determine greeting based on time of day
     if (hour < 5) {
-      greeting = 'Good Evening';
+      greeting = l.dashGreetingEvening;
     } else if (hour < 12) {
-      greeting = 'Good Morning';
+      greeting = l.dashGreetingMorning;
     } else if (hour < 18) {
-      greeting = 'Good Afternoon';
+      greeting = l.dashGreetingAfternoon;
     } else {
-      greeting = 'Good Evening';
+      greeting = l.dashGreetingEvening;
+    }
+
+    String prayerName(Prayer p) {
+      switch (p) {
+        case Prayer.fajr:
+          return l.prayerFajr;
+        case Prayer.sunrise:
+          return l.prayerSunrise;
+        case Prayer.dhuhr:
+          return l.prayerDhuhr;
+        case Prayer.asr:
+          return l.prayerAsr;
+        case Prayer.maghrib:
+          return l.prayerMaghrib;
+        case Prayer.isha:
+          return l.prayerIsha;
+        case Prayer.none:
+          return l.prayerLoading;
+      }
     }
 
     // Get next prayer from real prayer times
     if (prayerTimes != null) {
       // Use the notifier's getNextPrayer() method which handles after-Isha case
-      final nextPrayerEnum = ref.read(prayerTimesNotifierProvider.notifier).getNextPrayer();
+      final nextPrayerEnum =
+          ref.read(prayerTimesNotifierProvider.notifier).getNextPrayer();
 
       if (nextPrayerEnum != null && nextPrayerEnum != Prayer.none) {
-        nextPrayer = nextPrayerEnum.englishName;
+        nextPrayer = prayerName(nextPrayerEnum);
 
         // For Fajr after Isha, calculate tomorrow's Fajr time
         DateTime? nextPrayerDateTime;
-        if (nextPrayerEnum == Prayer.fajr && prayerTimes.nextPrayer() == Prayer.none) {
+        if (nextPrayerEnum == Prayer.fajr &&
+            prayerTimes.nextPrayer() == Prayer.none) {
           // After Isha, calculate tomorrow's Fajr
-          final duration = ref.read(prayerTimesNotifierProvider.notifier).getTimeUntilNextPrayer();
+          final duration = ref
+              .read(prayerTimesNotifierProvider.notifier)
+              .getTimeUntilNextPrayer();
           if (duration != null) {
             nextPrayerDateTime = DateTime.now().add(duration);
           }
@@ -633,31 +649,32 @@ class DashboardScreen extends HookConsumerWidget {
         prayerIcon = _getPrayerIcon(nextPrayerEnum);
       } else {
         // Fallback if no next prayer detected
-        nextPrayer = 'Loading...';
+        nextPrayer = l.prayerLoading;
         nextPrayerTime = '--:--';
         prayerIcon = Icons.access_time_rounded;
       }
     } else {
       // Fallback to basic logic if prayer times aren't loaded yet
+      final loading = l.commonLoading;
       if (hour < 5) {
-        nextPrayer = 'Fajr';
-        nextPrayerTime = 'Loading...';
+        nextPrayer = l.prayerFajr;
+        nextPrayerTime = loading;
         prayerIcon = Icons.wb_twilight_rounded;
       } else if (hour < 12) {
-        nextPrayer = 'Dhuhr';
-        nextPrayerTime = 'Loading...';
+        nextPrayer = l.prayerDhuhr;
+        nextPrayerTime = loading;
         prayerIcon = Icons.wb_sunny_rounded;
       } else if (hour < 15) {
-        nextPrayer = 'Asr';
-        nextPrayerTime = 'Loading...';
+        nextPrayer = l.prayerAsr;
+        nextPrayerTime = loading;
         prayerIcon = Icons.wb_cloudy_rounded;
       } else if (hour < 18) {
-        nextPrayer = 'Maghrib';
-        nextPrayerTime = 'Loading...';
+        nextPrayer = l.prayerMaghrib;
+        nextPrayerTime = loading;
         prayerIcon = Icons.nightlight_rounded;
       } else {
-        nextPrayer = 'Isha';
-        nextPrayerTime = 'Loading...';
+        nextPrayer = l.prayerIsha;
+        nextPrayerTime = loading;
         prayerIcon = Icons.dark_mode_rounded;
       }
     }
@@ -685,7 +702,7 @@ class DashboardScreen extends HookConsumerWidget {
                     GestureDetector(
                       onTap: () async {
                         // Refresh location in dashboard
-                        await _getCurrentLocation(locationState);
+                        await _getCurrentLocation(locationState, l);
                         // Refresh location provider which will trigger prayer times update
                         ref.read(locationNotifierProvider.notifier).refreshLocation();
                       },
@@ -747,7 +764,7 @@ class DashboardScreen extends HookConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Next Prayer',
+                        l.dashNextPrayer,
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.white.withValues(alpha: 0.6),
@@ -783,6 +800,7 @@ class DashboardScreen extends HookConsumerWidget {
   Widget _buildStatsOverview(
     AsyncValue<List<dynamic>> fardHabitsAsync,
     AsyncValue<List<dynamic>> sunnahHabitsAsync,
+    AppLocalizations l,
   ) {
     return fardHabitsAsync.when(
       data: (fardHabits) => sunnahHabitsAsync.when(
@@ -794,11 +812,25 @@ class DashboardScreen extends HookConsumerWidget {
               ? (completedToday / totalHabits * 100).toInt()
               : 0;
 
+          // Best current streak across all habits — honest 0 for new users.
+          int bestCurrent = 0;
+          for (final h in fardHabits) {
+            if (h.currentStreak > bestCurrent) {
+              bestCurrent = h.currentStreak as int;
+            }
+          }
+          for (final h in sunnahHabits) {
+            if (h.currentStreak > bestCurrent) {
+              bestCurrent = h.currentStreak as int;
+            }
+          }
+          final streakLabel = l.dashStreakDay(bestCurrent);
+
           return Row(
             children: [
               Expanded(
                 child: _buildStatCard(
-                  'Completion',
+                  l.dashStatCompletion,
                   '$completionRate%',
                   Icons.check_circle_rounded,
                   const Color(0xFF34D399),
@@ -807,7 +839,7 @@ class DashboardScreen extends HookConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildStatCard(
-                  'Today',
+                  l.dashStatToday,
                   '$completedToday/$totalHabits',
                   Icons.today_rounded,
                   const Color(0xFFD4AF37),
@@ -816,8 +848,8 @@ class DashboardScreen extends HookConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildStatCard(
-                  'Streak',
-                  '7 days',
+                  l.dashStatStreak,
+                  streakLabel,
                   Icons.local_fire_department_rounded,
                   const Color(0xFFF97316),
                 ),
@@ -860,13 +892,14 @@ class DashboardScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context, WidgetRef ref) {
+  Widget _buildQuickActions(
+      BuildContext context, WidgetRef ref, AppLocalizations l) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Quick Actions',
-          style: TextStyle(
+        Text(
+          l.dashQuickActions,
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Color(0xFFD4AF37),
@@ -877,7 +910,7 @@ class DashboardScreen extends HookConsumerWidget {
           children: [
             Expanded(
               child: _buildActionButton(
-                'Add Habit',
+                l.dashAddHabit,
                 Icons.add_circle_rounded,
                 () {
                   Navigator.push(
@@ -892,7 +925,7 @@ class DashboardScreen extends HookConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _buildActionButton(
-                'View Stats',
+                l.dashViewStats,
                 Icons.bar_chart_rounded,
                 () {
                   // Navigate to Progress tab (index 4)
@@ -933,13 +966,14 @@ class DashboardScreen extends HookConsumerWidget {
   Widget _buildTodayProgress(
     AsyncValue<List<dynamic>> fardHabitsAsync,
     AsyncValue<List<dynamic>> sunnahHabitsAsync,
+    AppLocalizations l,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Today\'s Progress',
-          style: TextStyle(
+        Text(
+          l.dashTodayProgress,
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Color(0xFFD4AF37),
@@ -962,7 +996,7 @@ class DashboardScreen extends HookConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '$completedToday of $totalHabits completed',
+                          l.dashCompletedOfTotal(completedToday, totalHabits),
                           style: const TextStyle(
                             fontSize: 16,
                             color: Colors.white,

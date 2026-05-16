@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:sakinah_flow/core/providers/theme_provider.dart';
 import 'package:sakinah_flow/core/theme/app_theme.dart';
 import 'package:sakinah_flow/features/salah/services/adhan_service.dart';
 import 'package:sakinah_flow/features/habits/providers/active_context_provider.dart';
@@ -19,19 +20,12 @@ class HomeScreenIslamic extends HookConsumerWidget {
     final activeContext = ref.watch(activeContextNotifierProvider);
     final fardHabitsAsync = ref.watch(watchFardHabitsProvider);
     final sunnahHabitsAsync = ref.watch(watchSunnahHabitsProvider);
+    final themeColors = ref.watch(themeColorsProvider);
 
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF1A5F4E), // Deep teal
-              const Color(0xFF0F3D30), // Darker teal
-              const Color(0xFF0A1F1A), // Almost black teal
-            ],
-          ),
+          gradient: themeColors.backgroundGradient,
         ),
         child: SafeArea(
           child: CustomScrollView(
